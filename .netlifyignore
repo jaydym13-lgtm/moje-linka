@@ -1,0 +1,8 @@
+firestore.rules
+firebase.json
+.firebaserc
+functions/
+.vscode/
+.git/
+.gitignore
+README.md

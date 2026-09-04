@@ -1,5 +1,5 @@
 // =========================================================================
-// ⚖️ SROVNÁVAČ LINKY (POROVNÁVAČ VIP) - ALPINE.JS ENGINE (v3.0.0 Enterprise)
+// ⚖️ SROVNÁVAČ LINKY (POROVNÁVAČ VIP) - ALPINE.JS ENGINE
 // =========================================================================
 
 // --- POMOCNÁ FUNKCE PRO ZÁCHRANU NUL ---
@@ -591,7 +591,7 @@ let nCode = nD.baseCode + '_' + nD.code;
             
             Alpine.nextTick(() => {
                 goToScreen('resultsScreen', false);
-                setTimeout(() => { if (typeof window.aplikovatAutoShrink === 'function') window.aplikovatAutoShrink(); }, 50);
+                requestAnimationFrame(() => { if (typeof window.aplikovatAutoShrink === 'function') window.aplikovatAutoShrink(); });
             });
         },
 
@@ -607,8 +607,8 @@ let nCode = nD.baseCode + '_' + nD.code;
             let engine = window.linkaEngine();
             
             [...engine.miroList, {id: 'novoElko', name: 'Novopac - Zvedací elko'}].forEach(item => {
-                    if (item.id === 'miroProg') return;
-                    let vO = safeGet(o[item.id]); 
+                if (item.id === 'miroProg') return;
+                let vO = safeGet(o[item.id]); 
                 let vN = safeGet(n[item.id]);
 
                 if (item.id === 'novoElko') {
@@ -633,7 +633,7 @@ let nCode = nD.baseCode + '_' + nD.code;
             
             Alpine.nextTick(() => {
                 goToScreen('resultsScreen', false);
-                setTimeout(() => { if (typeof window.aplikovatAutoShrink === 'function') window.aplikovatAutoShrink(); }, 50);
+                requestAnimationFrame(() => { if (typeof window.aplikovatAutoShrink === 'function') window.aplikovatAutoShrink(); });
             });
         }
     }));

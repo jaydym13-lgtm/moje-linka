@@ -1,5 +1,5 @@
 // =========================================================================
-// 🚀 FIREBASE FIRESTORE, PRÁVA A TICHÝ HLÍDAČ (VERZE 3.0.0 - ŽIVÁ OBČANKA)
+// 🚀 FIREBASE FIRESTORE, PRÁVA A TICHÝ HLÍDAČ (ŽIVÁ OBČANKA)
 // =========================================================================
 
 const firebaseConfig = {
@@ -74,7 +74,7 @@ document.addEventListener('alpine:init', () => {
         vyroba: {},
         baleni: {},
         upravy: {},
-        nastaveni: { vip_users: {}, vip_plus_users: {}, admin_users: {}, editor_users: {}, prezdivky: {}, zmrazeni: {}, sablona: null },
+        nastaveni: { vip_users: {}, vip_plus_users: {}, admin_users: {}, editor_users: {}, owner_users: {}, prezdivky: {}, zmrazeni: {}, sablona: null },
         uzivatele_roster: {},
         zamek: {},
         hlaseni: { id: "audit-01", isActive: false, text: "" },
@@ -94,11 +94,13 @@ document.addEventListener('alpine:init', () => {
             let result = [];
             
             usersArray.forEach(safeKey => {
+                // Neviditelný Vlastník – nezobrazuje se v seznamu uživatelů
+                if (this.nastaveni.owner_users && this.nastaveni.owner_users[safeKey]) return;
+
                 let uData = this.uzivatele_roster[safeKey] || {};
                 let displayEmail = uData.email || safeKey;
 
-                if (displayEmail === 'makyan13@seznam.cz' || safeKey === 'makyan13@seznam.cz') return;
-                if (safeKey.includes(',')) return; 
+                if (safeKey.includes(',')) return;
 
                 let role = 'Reader';
                 if (this.nastaveni.admin_users && this.nastaveni.admin_users[safeKey]) role = 'Admin';
@@ -139,7 +141,6 @@ document.addEventListener('alpine:init', () => {
             
             if (!isLoggingIn) {
                 if (typeof handleAppRouting === 'function') handleAppRouting(true);
-                setTimeout(() => { if (typeof ukazEulaModal === 'function') ukazEulaModal(false); }, 2000);
             }
 
         } else {
@@ -169,105 +170,127 @@ function aktualizujUiPoNacteniDat() {
     }
 }
 
+let isRosterListenerActive = false;
+
+function ensureRosterListener() {
+    let dbStore = Alpine.store('trezor');
+    let isOwner = dbStore.nastaveni.owner_users && dbStore.nastaveni.owner_users[CURRENT_USER_KEY] === true;
+    let isAdmin = isOwner || (dbStore.nastaveni.admin_users && dbStore.nastaveni.admin_users[CURRENT_USER_KEY] === true);
+
+    if (isAdmin && !isRosterListenerActive) {
+        isRosterListenerActive = true;
+        db.collection('linka_data').doc('uzivatele').onSnapshot((doc) => {
+            if (doc.exists) {
+                Alpine.store('trezor').uzivatele_roster = doc.data() || {};
+            }
+        }, (err) => console.warn("Roster listener:", err.message));
+    }
+}
+
 function startDatabaseListener() {
     if (isDbListenerActive) return;
     isDbListenerActive = true;
     
-    db.collection('linka_data').onSnapshot((snapshot) => {
-        window._linkaCache = {}; // 🚀 Zahození staré paměti při stáhnutí nových dat z cloudu
-        let dbStore = Alpine.store('trezor');
+    let dbStore = Alpine.store('trezor');
+    let loadedDocs = { nastaveni: false, databaze_master: false };
 
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            if (doc.id === 'zamek') dbStore.zamek = data || {};
-            if (doc.id === 'hlaseni') dbStore.hlaseni = data || { id: "audit-01", isActive: false, text: "" };
-            
-            if (doc.id === 'nastaveni') {
-                let nast = data || {};
-                nast.vip_users = nast.vip_users || {};
-                nast.vip_plus_users = nast.vip_plus_users || {};
-                nast.admin_users = nast.admin_users || {};
-                nast.editor_users = nast.editor_users || {};
-                nast.prezdivky = nast.prezdivky || {};
-                nast.zmrazeni = nast.zmrazeni || {};
-                dbStore.nastaveni = nast;
-                
-                if (data.appVersion) {
-                    let localVer = localStorage.getItem('currentAppVersion');
-                    if (!localVer) { localStorage.setItem('currentAppVersion', data.appVersion); } 
-                    else if (localVer !== data.appVersion) {
-                        localStorage.setItem('currentAppVersion', data.appVersion);
-                        let splash = document.getElementById('splashScreen');
-                        if (splash) {
-                            splash.style.display = 'flex'; splash.style.opacity = '1';
-                            let sub = splash.querySelector('.splash-subtitle');
-                            if (sub) sub.innerText = "Aktualizuji aplikaci...";
-                            let t1 = document.getElementById('splashTitleText');
-                            if (t1) t1.style.display = 'block';
-                            let t2 = document.getElementById('splashSubText');
-                            if (t2) t2.style.display = 'block';
-                        }
-                        if ('serviceWorker' in navigator) {
-                            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                                // 🚀 PROFI SMAZÁNÍ KEŠE: Najde a smaže VŠECHNY staré verze (v1, v2 atd.)
-                                caches.keys().then(keys => {
-                                    Promise.all(keys.map(k => caches.delete(k))).then(() => {
-                                        for(let registration of registrations) { registration.update(); } 
-                                        setTimeout(() => location.reload(true), 1500);
-                                    });
-                                });
-                            });
-                        } else { setTimeout(() => location.reload(true), 1500); }
-                    }
-                }
-            }
-            if (doc.id === 'uzivatele') dbStore.uzivatele_roster = data || {};
-            
-            if (doc.id === 'databaze_master') {
-                let d = data || { vyroba: {}, baleni: {} };
-                dbStore.databaze_master = d; dbStore.vyroba = d.vyroba || {}; dbStore.baleni = d.baleni || {};
-            }
-        });
-
-        if (CURRENT_USER_KEY) { 
-            applyUserRights(); 
-            checkIfFrozen();
-
-            // 🏛️ PROFI POJISTKA PROTI DUCHŮM: Automatická registrace pamětníků a auto-přihlášených
-            if (dbStore.uzivatele_roster && !dbStore.uzivatele_roster[CURRENT_USER_KEY] && CURRENT_EMAIL) {
-                let devId = getDeviceId();
-                let devName = getReadableDevice();
-                let silentRoster = {
-                    email: CURRENT_EMAIL,
-                    devices: [devId],
-                    loginHistory: [{ time: Date.now(), deviceType: devName, deviceId: devId }],
-                    lastLogin: Date.now()
-                };
-                db.collection('linka_data').doc('uzivatele').set({ [CURRENT_USER_KEY]: silentRoster }, { merge: true }).catch(e => console.warn(e));
-            }
-
-            // Bod 1: Zápis přezdívky do inputu v nastavení z Cloudu
-            let uData = dbStore.uzivatele_roster[CURRENT_USER_KEY] || {};
-            let myNick = uData.vlastniJmeno || '';
-            let inputPrez = document.getElementById('mojePrezdivkaInput');
-            if (inputPrez && myNick) inputPrez.value = myNick;
-        }
-        
-        if (!initialDataLoaded) {
+    function checkInitialReady() {
+        if (!initialDataLoaded && loadedDocs.nastaveni && loadedDocs.databaze_master) {
             aktualizujUiPoNacteniDat();
             initialDataLoaded = true;
-            
-            // 🎭 OPONA ZLATÝ BOD: Data z Firebase jsou tady, Alpine vykreslil DOM. 
-            // Zvedneme oponu POUZE tehdy, pokud se zrovna nepřihlašuješ!
-            setTimeout(() => {
+
+            requestAnimationFrame(() => {
                 if (!isLoggingIn && typeof window.zvedniOponu === 'function') {
                     window.zvedniOponu();
                 }
-            }, 50); 
+            });
         }
+    }
+
+    // 1. Nastavení
+    db.collection('linka_data').doc('nastaveni').onSnapshot((doc) => {
+        let data = doc.exists ? doc.data() : {};
+        let nast = data || {};
+        nast.vip_users = nast.vip_users || {};
+        nast.vip_plus_users = nast.vip_plus_users || {};
+        nast.admin_users = nast.admin_users || {};
+        nast.editor_users = nast.editor_users || {};
+        nast.prezdivky = nast.prezdivky || {};
+        nast.zmrazeni = nast.zmrazeni || {};
+        nast.owner_users = nast.owner_users || {};
+        dbStore.nastaveni = nast;
+
+        if (data.appVersion) {
+            let localVer = localStorage.getItem('currentAppVersion');
+            if (!localVer) { 
+                localStorage.setItem('currentAppVersion', data.appVersion); 
+            } else if (localVer !== data.appVersion) {
+                localStorage.setItem('currentAppVersion', data.appVersion);
+                let splash = document.getElementById('splashScreen');
+                if (splash) {
+                    splash.style.display = 'flex'; splash.style.opacity = '1';
+                    let sub = splash.querySelector('.splash-subtitle');
+                    if (sub) sub.innerText = "Aktualizuji aplikaci...";
+                    let t1 = document.getElementById('splashTitleText');
+                    if (t1) t1.style.display = 'block';
+                    let t2 = document.getElementById('splashSubText');
+                    if (t2) t2.style.display = 'block';
+                }
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(registrations => {
+                        caches.keys().then(keys => {
+                            Promise.all(keys.map(k => caches.delete(k))).then(() => {
+                                for (let r of registrations) { r.update(); }
+                                location.reload(true);
+                            });
+                        });
+                    });
+                } else { 
+                    location.reload(true); 
+                }
+            }
+        }
+
+        if (CURRENT_USER_KEY) {
+            applyUserRights();
+            checkIfFrozen();
+            ensureRosterListener();
+
+            let uData = (dbStore.uzivatele_roster && dbStore.uzivatele_roster[CURRENT_USER_KEY]) || {};
+            let myNick = (nast.prezdivky && nast.prezdivky[CURRENT_USER_KEY]) || uData.vlastniJmeno || '';
+            let inputPrez = document.getElementById('mojePrezdivkaInput');
+            if (inputPrez && myNick) inputPrez.value = myNick;
+        }
+
+        loadedDocs.nastaveni = true;
+        checkInitialReady();
         localStorage.setItem('posledniAktualizace', Date.now());
     });
 
+    // 2. Master data (Receptury)
+    db.collection('linka_data').doc('databaze_master').onSnapshot((doc) => {
+        window._linkaCache = {}; // Vyprázdnění paměti pouze při reálné změně receptur
+        let d = doc.exists ? doc.data() : { vyroba: {}, baleni: {} };
+        dbStore.databaze_master = d;
+        dbStore.vyroba = d.vyroba || {};
+        dbStore.baleni = d.baleni || {};
+
+        loadedDocs.databaze_master = true;
+        checkInitialReady();
+        localStorage.setItem('posledniAktualizace', Date.now());
+    });
+
+    // 3. Zámek
+    db.collection('linka_data').doc('zamek').onSnapshot((doc) => {
+        dbStore.zamek = doc.exists ? doc.data() : {};
+    });
+
+    // 4. Hlášení
+    db.collection('linka_data').doc('hlaseni').onSnapshot((doc) => {
+        dbStore.hlaseni = doc.exists ? doc.data() : { id: "audit-01", isActive: false, text: "" };
+    });
+
+    // 5. Detekce souběžného přihlášení (pouze vlastní dokument)
     if (CURRENT_USER_KEY) {
         db.collection('uzivatele_online').doc(CURRENT_USER_KEY).onSnapshot((doc) => {
             if (isLoggingIn || doc.metadata.fromCache) return;
@@ -287,6 +310,9 @@ function startDatabaseListener() {
 // 🛡️ CHYTRÉ ZMRAZENÍ BEZ SEBEDESTRUKCE
 async function checkIfFrozen(force = false) {
     let dbStore = Alpine.store('trezor');
+    let isOwner = (dbStore.nastaveni.owner_users && dbStore.nastaveni.owner_users[CURRENT_USER_KEY] === true);
+    if (isOwner) return; // Vlastník má absolutní imunitu
+
     let isFrozen = force || (dbStore.nastaveni.zmrazeni && dbStore.nastaveni.zmrazeni[CURRENT_USER_KEY] === true);
     
     if (isFrozen) {
@@ -324,9 +350,8 @@ function applyUserRights() {
   document.getElementById('connectionStatus').style.display = 'flex';
   let dbStore = Alpine.store('trezor');
   
-  let isMakyan = (CURRENT_EMAIL === 'makyan13@seznam.cz');
-  
-  let isAdmin = isMakyan || (dbStore.nastaveni.admin_users && dbStore.nastaveni.admin_users[CURRENT_USER_KEY] === true);
+  let isOwner = (dbStore.nastaveni.owner_users && dbStore.nastaveni.owner_users[CURRENT_USER_KEY] === true);
+  let isAdmin = isOwner || (dbStore.nastaveni.admin_users && dbStore.nastaveni.admin_users[CURRENT_USER_KEY] === true);
   let isEditor = isAdmin || (dbStore.nastaveni.editor_users && dbStore.nastaveni.editor_users[CURRENT_USER_KEY] === true);
   let isVipPlus = isEditor || (dbStore.nastaveni.vip_plus_users && dbStore.nastaveni.vip_plus_users[CURRENT_USER_KEY] === true);
   let isVip = isVipPlus || (dbStore.nastaveni.vip_users && dbStore.nastaveni.vip_users[CURRENT_USER_KEY] === true);
@@ -362,7 +387,8 @@ function applyUserRights() {
       else if (isVip) { roleName = "VIP"; roleClass = "badge-vip"; emoji = "⭐"; }
 
       let uData = dbStore.uzivatele_roster[CURRENT_USER_KEY] || {};
-      let jehoVlastniPrezdivka = uData.vlastniJmeno ? uData.vlastniJmeno : CURRENT_EMAIL;
+      let customNick = (dbStore.nastaveni.prezdivky && dbStore.nastaveni.prezdivky[CURRENT_USER_KEY]) || uData.vlastniJmeno;
+      let jehoVlastniPrezdivka = customNick || CURRENT_EMAIL;
 
       let emailEl = document.getElementById('menuUserEmail');
       let nickEl = document.getElementById('menuUserNick');
@@ -399,9 +425,8 @@ async function zmenitRoli(uid, novaRole) {
     if(typeof showToast === 'function') showToast("Měním roli na serveru, vydrž...");
     
     try {
-        let authToken = await currentUser.getIdToken();
         const zmenitRoliServer = cloudFunctions.httpsCallable('zmenitRoliServer');
-        await zmenitRoliServer({ uid: uid, role: novaRole, token: authToken });
+        await zmenitRoliServer({ uid: uid, role: novaRole });
         
         if(typeof showToast === 'function') showToast("Role úspěšně uložena (Server potvrzen)!");
     } catch (e) {
@@ -410,7 +435,7 @@ async function zmenitRoli(uid, novaRole) {
     }
 }
 
-// 🚀 FUNKCE PRO ZMRAZENÍ S EXPLICITNÍM TOKENEM
+// 🚀 FUNKCE PRO ZMRAZENÍ
 async function toggleFreezeStatus(uid, status) {
     if (isLoggingIn || (typeof isManuallyDisconnected !== 'undefined' && isManuallyDisconnected) || !navigator.onLine || !cloudFunctions) { 
         if(typeof showToast === 'function') showToast("⛔ Potřebuješ internet a funkční spojení k úpravě zmrazení!"); return; 
@@ -424,9 +449,8 @@ async function toggleFreezeStatus(uid, status) {
     if(typeof showToast === 'function') showToast("Odesílám rozsudek na server...");
 
     try {
-        let authToken = await currentUser.getIdToken();
         const zmrazitServer = cloudFunctions.httpsCallable('zmrazitUzivateleServer');
-        await zmrazitServer({ uid: uid, isFrozen: status, token: authToken });
+        await zmrazitServer({ uid: uid, isFrozen: status });
         
         if(typeof showToast === 'function') showToast(status ? "Účet tvrdě zmrazen!" : "Účet odmrazen!");
     } catch (e) {
@@ -468,7 +492,7 @@ async function checkLogin() {
   let splash = document.getElementById('splashScreen');
   if (splash) {
       splash.style.display = 'flex';
-      setTimeout(() => { splash.style.opacity = '1'; }, 10);
+      requestAnimationFrame(() => { splash.style.opacity = '1'; });
       let t1 = document.getElementById('splashTitleText');
       if (t1) t1.style.display = 'block';
       let t2 = document.getElementById('splashSubText');
@@ -508,21 +532,10 @@ async function checkLogin() {
       let devId = getDeviceId();
       let devName = getReadableDevice();
 
-      let rosterRef = db.collection('linka_data').doc('uzivatele');
-      let rosterDoc = await rosterRef.get();
-      let rosterData = rosterDoc.exists ? rosterDoc.data() : {};
-      
-      let userRoster = rosterData[uid] || { email: userEmail, devices: [], loginHistory: [] };
-      let isNewDevice = !userRoster.devices.includes(devId);
-      if (isNewDevice) userRoster.devices.push(devId);
-
-      userRoster.loginHistory = userRoster.loginHistory || [];
-      userRoster.loginHistory.unshift({ time: Date.now(), deviceType: devName, deviceId: devId });
-      if (userRoster.loginHistory.length > 5) userRoster.loginHistory.pop();
-      userRoster.lastLogin = Date.now();
-
-      await db.collection('security_logs').add({ uid: uid, email: userEmail, time: Date.now(), deviceType: devName, deviceId: devId, isNewDevice: isNewDevice });
-      await rosterRef.set({ [uid]: userRoster }, {merge: true}); 
+      if (cloudFunctions) {
+          const zalogovatPrihlaseni = cloudFunctions.httpsCallable('zalogovatPrihlaseniServer');
+          await zalogovatPrihlaseni({ deviceId: devId, deviceType: devName }).catch(e => console.warn("Logování:", e));
+      }
       await db.collection('uzivatele_online').doc(uid).set({ deviceId: devId }); 
 
       localStorage.setItem("casPrihlaseni", Date.now());
@@ -562,13 +575,13 @@ async function checkLogin() {
           }
       }
 
-      // 6. KONEČNÁ OPONA: Všechno je na svém místě, teď můžeme s klidem stáhnout oponu a ukončit zámek
-      setTimeout(() => {
+      // 6. KONEČNÁ OPONA: Synchronní předání po dokončení renderu bez odpočítávání času
+      requestAnimationFrame(() => {
           if (initialDataLoaded && typeof window.zvedniOponu === 'function') {
               window.zvedniOponu();
           }
-          isLoggingIn = false; // UVOLNĚNÍ ZÁMKU NA SAMÉM KONCI!
-      }, 100);
+          isLoggingIn = false;
+      });
 
   } catch (error) {
       isLoggingIn = false;
@@ -588,12 +601,14 @@ async function checkLogin() {
       } else if (error.code === "auth/user-not-found") {
           errorMsg = "❌ Účet neexistuje!";
       } else if (error.code === "auth/too-many-requests") {
-          errorMsg = "❌ Zablokováno (příliš mnoho pokusů)! Firebase tě chladí.";
+          errorMsg = "❌ Zablokováno (příliš mnoho pokusů). Zkuste to za chvíli.";
       } else if (error.code === "permission-denied") {
-          errorMsg = "❌ Přihlášení OK, ale databáze ti blokuje vstup (Chyba oprávnění).";
+          errorMsg = "❌ Účet ověřen, ale přístup do databáze byl zamítnut.";
           auth.signOut(); 
       } else {
-          errorMsg = `❌ CHYBA: ${error.message} <br><span style="font-size:10px">(${error.code})</span>`;
+          const safeMessage = vycistiText(error.message || 'Neznámá chyba');
+          const safeCode = vycistiText(error.code || 'ERR');
+          errorMsg = `❌ CHYBA: ${safeMessage} <br><span style="font-size:10px">(${safeCode})</span>`;
       }
 
       document.getElementById('loginError').innerHTML = errorMsg; 
@@ -629,27 +644,36 @@ function loadSecurityLogs() {
         logs.sort((a, b) => b.time - a.time);
         
         logs.forEach((p) => {
+            // Záznamy Vlastníka jsou v auditní historii skryté
+            if (dbStore.nastaveni.owner_users && dbStore.nastaveni.owner_users[p.uid]) return;
+
             let d = new Date(p.time);
             let timeStr = d.toLocaleDateString('cs-CZ') + ' ' + d.toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'});
-            let deviceStr = p.deviceType ? `(${p.deviceType})` : '';
             let keyToFind = p.uid;
-            let prezdivka = (dbStore.nastaveni.prezdivky && dbStore.nastaveni.prezdivky[keyToFind]) ? dbStore.nastaveni.prezdivky[keyToFind] : p.email;
+            let rawNick = (dbStore.nastaveni.prezdivky && dbStore.nastaveni.prezdivky[keyToFind]) ? dbStore.nastaveni.prezdivky[keyToFind] : p.email;
+            
+            let esc = (str) => typeof vycistiText === 'function' ? vycistiText(str) : String(str || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+            let safeNick = esc(rawNick);
+            let safeEmail = esc(p.email);
+            let safeDeviceId = esc(p.deviceId || 'Neznámé');
+            let safeDeviceStr = p.deviceType ? `(${esc(p.deviceType)})` : '';
             
             let iconText = p.isNewDevice ? '🚨 NOVÉ ZAŘÍZENÍ' : '✅ Běžné přihlášení';
             let color = p.isNewDevice ? '#ef4444' : '#10b981';
 
             html += `<div class="sec-log-row">
-                        <span class="sec-log-nick">${prezdivka}</span> <span class="sec-log-email">(${p.email})</span> <span class="sec-log-device">[${p.deviceId || 'Neznámé'}]</span><br>
-                        <span class="sec-log-time">${timeStr} ${deviceStr} - <span style="color:${color}; font-weight:bold;">${iconText}</span></span>
+                        <span class="sec-log-nick">${safeNick}</span> <span class="sec-log-email">(${safeEmail})</span> <span class="sec-log-device">[${safeDeviceId}]</span><br>
+                        <span class="sec-log-time">${timeStr} ${safeDeviceStr} - <span style="color:${color}; font-weight:bold;">${iconText}</span></span>
                      </div>`;
         });
         listDiv.innerHTML = html;
     }, (error) => {
         // 🚀 PROFI CHYTAČ CHYB: Vypíše přesný důvod selhání rovnou na obrazovku!
         if (listDiv) {
+            const safeErr = vycistiText(error.message || 'Chyba serveru');
             listDiv.innerHTML = `<div style="color: #ef4444; padding: 20px; text-align: center; font-weight: bold; border: 1px dashed #ef4444; margin-top: 10px; border-radius: 8px;">
                 ❌ CHYBA NAČÍTÁNÍ HISTORIE:<br>
-                <span style="font-size: 11px; font-weight: normal;">${error.message}</span>
+                <span style="font-size: 11px; font-weight: normal;">${safeErr}</span>
             </div>`;
         }
         console.error("Chyba při stahování historie:", error);
@@ -662,23 +686,22 @@ async function smazatHistoriiPsu() {
         let listDiv = document.getElementById('adminSecurityList');
         if(listDiv) listDiv.innerHTML = "Splachuji historii na pozadí, vydrž... 🚽";
         
-        async function smazatDavku() {
-            let snapshot = await db.collection('security_logs').limit(500).get();
-            if (snapshot.empty) {
-                if (typeof showToast === 'function') showToast("Historie byla úspěšně spláchnuta! 🚽"); 
-                if(listDiv) listDiv.innerHTML = "Zatím žádná historie.";
-                return;
+        (async () => {
+            try {
+                while (true) {
+                    let snapshot = await db.collection('security_logs').limit(500).get();
+                    if (snapshot.empty) break;
+                    let batch = db.batch();
+                    snapshot.docs.forEach((doc) => { batch.delete(doc.ref); });
+                    await batch.commit();
+                }
+                if (typeof showToast === 'function') showToast("Historie byla úspěšně spláchnuta! 🚽");
+                if (listDiv) listDiv.innerHTML = "Zatím žádná historie.";
+            } catch (err) {
+                if (typeof showToast === 'function') showToast("❌ Chyba při mazání: " + err);
+                if (listDiv) listDiv.innerHTML = "Chyba při mazání historie.";
             }
-            let batch = db.batch();
-            snapshot.docs.forEach((doc) => { batch.delete(doc.ref); });
-            await batch.commit();
-            setTimeout(smazatDavku, 500); 
-        }
-        
-        smazatDavku().catch((err) => {
-            if (typeof showToast === 'function') showToast("❌ Chyba při mazání: " + err);
-            if(listDiv) listDiv.innerHTML = "Chyba při načítání historie.";
-        });
+        })();
     }
 }
 
@@ -689,11 +712,14 @@ function zobrazitHistoriiUzivatele(uid) {
         if(typeof showToast === 'function') showToast("Pro tohoto uživatele zatím nemáme uloženou historii.");
         return;
     }
+    let esc = (str) => typeof vycistiText === 'function' ? vycistiText(str) : String(str || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     let html = "<div style='text-align:left; font-size:13px; line-height:1.5;'>";
     userRoster.loginHistory.forEach((log, i) => {
         let d = new Date(log.time);
         let timeStr = d.toLocaleDateString('cs-CZ') + ' ' + d.toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'});
-        html += `<b>${i+1}.</b> ${timeStr} <br><span style='color:#64748b; font-size:11px;'>Zařízení: ${log.deviceType || 'Neznámé'} [${log.deviceId || 'N/A'}]</span><hr style='border:0; border-top:1px solid #e2e8f0; margin:5px 0;'>`;
+        let safeDeviceType = esc(log.deviceType || 'Neznámé');
+        let safeDeviceId = esc(log.deviceId || 'N/A');
+        html += `<b>${i+1}.</b> ${timeStr} <br><span style='color:#64748b; font-size:11px;'>Zařízení: ${safeDeviceType} [${safeDeviceId}]</span><hr style='border:0; border-top:1px solid #e2e8f0; margin:5px 0;'>`;
     });
     html += "</div>";
     showCustomModal({ title: `Posledních 5 přihlášení:`, message: html, type: "confirm" }); 
@@ -702,8 +728,8 @@ function zobrazitHistoriiUzivatele(uid) {
 function openAdminSettings() {
   if (typeof closeMenu === 'function') closeMenu();
   let dbStore = Alpine.store('trezor');
-  let isMakyan = (CURRENT_EMAIL === 'makyan13@seznam.cz');
-  let jeAdmin = isMakyan || (dbStore.nastaveni.admin_users && dbStore.nastaveni.admin_users[CURRENT_USER_KEY] === true);
+  let isOwner = (dbStore.nastaveni.owner_users && dbStore.nastaveni.owner_users[CURRENT_USER_KEY] === true);
+  let jeAdmin = isOwner || (dbStore.nastaveni.admin_users && dbStore.nastaveni.admin_users[CURRENT_USER_KEY] === true);
   
   if (!jeAdmin) {
       if (typeof showToast === 'function') showToast("❌ Na tuto stránku nemáš přístup!");
@@ -812,11 +838,51 @@ function stahnoutZalohu() {
 
 async function zmenitPrezdivku(uid, currentNick) {
     let novyNick = await showCustomModal({ title: "Změna přezdívky", inputValue: currentNick, type: "prompt" });
-    if (novyNick !== null && novyNick.trim() !== "") {
-        db.collection('linka_data').doc('nastaveni').set({ prezdivky: { [uid]: novyNick.trim() } }, {merge: true})
-        .then(() => { if (typeof showToast === 'function') showToast("Přezdívka uložena!"); });
+        if (novyNick !== null && novyNick.trim() !== "") {
+            db.collection('linka_data').doc('nastaveni').set({ prezdivky: { [uid]: novyNick.trim() } }, {merge: true})
+            .then(() => { if (typeof showToast === 'function') showToast("Přezdívka uložena!"); });
+        }
     }
-}
+
+    async function ulozMojeJmeno() {
+        let inputEl = document.getElementById('mojePrezdivkaInput');
+        if (!inputEl) return;
+        let novyNick = inputEl.value.trim();
+
+        if (!novyNick) {
+            if (typeof showToast === 'function') showToast("Musíš zadat přezdívku!");
+            return;
+        }
+        if (!CURRENT_USER_KEY) {
+            if (typeof showToast === 'function') showToast("Nejsi přihlášen!");
+            return;
+        }
+
+        let dbStore = Alpine.store('trezor');
+        let isOwner = dbStore.nastaveni.owner_users && dbStore.nastaveni.owner_users[CURRENT_USER_KEY] === true;
+
+        try {
+            if (isOwner) {
+                // Vlastník ukládá do privátní mapy nastavení (nezapisuje se do veřejného seznamu uživatelů)
+                await db.collection('linka_data').doc('nastaveni').set({
+                    prezdivky: { [CURRENT_USER_KEY]: novyNick }
+                }, { merge: true });
+                dbStore.nastaveni.prezdivky[CURRENT_USER_KEY] = novyNick;
+            } else {
+                // Běžný uživatel ukládá do své karty uživatele
+                await db.collection('linka_data').doc('uzivatele').set({
+                    [CURRENT_USER_KEY]: { vlastniJmeno: novyNick }
+                }, { merge: true });
+                if (!dbStore.uzivatele_roster[CURRENT_USER_KEY]) dbStore.uzivatele_roster[CURRENT_USER_KEY] = {};
+                dbStore.uzivatele_roster[CURRENT_USER_KEY].vlastniJmeno = novyNick;
+            }
+
+            applyUserRights();
+            if (typeof showToast === 'function') showToast("Přezdívka úspěšně uložena!");
+        } catch (err) {
+            if (typeof showToast === 'function') showToast("❌ Chyba při ukládání: " + err.message);
+        }
+    }
 
 function toggleUserStatus(typKategorie, safeKey, novyStav) {
   if (typeof isManuallyDisconnected !== 'undefined' && (isManuallyDisconnected || !navigator.onLine)) {
@@ -940,6 +1006,6 @@ auth.onAuthStateChanged((user) => {
     if (user) {
         CURRENT_USER_KEY = user.uid;
         window.currentUid = user.uid; // Bezpečné zálohování pro kritické systémové události okna
-        setTimeout(() => nahlasMojeSpojeni(true), 1000);
+        nahlasMojeSpojeni(true);
     }
 });

@@ -1,51 +1,46 @@
-// index.js - VERZE 3.0.0 (GEN 2 PROFI)
+// index.js
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require('firebase-admin');
 
 // Inicializace administrátorských práv pro server
 admin.initializeApp();
 
-// 👑 Pomocná konstanta pro Boha (Makyána)
-const MAKYAN_EMAIL = 'makyan13@seznam.cz';
-
 // =========================================================================
 // 1. FUNKCE PRO ZMĚNU ROLE
 // =========================================================================
 exports.zmenitRoliServer = onCall({ region: "us-central1" }, async (request) => {
-    // V 2. generaci jsou data v request.data
-    const data = request.data;
-
-    // 1. PROFI KONTROLA: Vytáhneme si občanku z kufříku
-    if (!data || !data.token) {
-        throw new HttpsError('unauthenticated', 'Chybí bezpečnostní token.');
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Chybí ověření uživatele.');
     }
 
-    let decodedToken;
-    try {
-        decodedToken = await admin.auth().verifyIdToken(data.token);
-    } catch (error) {
-        throw new HttpsError('unauthenticated', 'Neplatný nebo expirovaný token.');
+    const callerEmail = (request.auth.token.email || '').toLowerCase();
+    const callerRole = request.auth.token.role;
+
+    const db = admin.firestore();
+    const nastaveniDoc = await db.collection('linka_data').doc('nastaveni').get();
+    const nastaveniData = nastaveniDoc.exists ? nastaveniDoc.data() : {};
+    const isCallerOwner = nastaveniData.owner_users && nastaveniData.owner_users[request.auth.uid] === true;
+
+    if (!isCallerOwner && callerRole !== 'Admin') {
+        throw new HttpsError('permission-denied', 'Operace vyžaduje administrátorské oprávnění.');
     }
 
-    const callerEmail = (decodedToken.email || '').toLowerCase();
-    const callerRole = decodedToken.role;
-
-    if (callerEmail !== MAKYAN_EMAIL && callerRole !== 'Admin') {
-        throw new HttpsError('permission-denied', 'Nemáš práva měnit role. Nejsi Admin.');
-    }
-
+    const data = request.data || {};
     const targetUid = data.uid;
     const newRole = data.role;
+    const allowedRoles = ['Reader', 'Vip', 'VipPlus', 'Editor', 'Admin'];
+
+    if (!targetUid || !newRole || !allowedRoles.includes(newRole)) {
+        throw new HttpsError('invalid-argument', 'Neplatný požadavek na změnu role.');
+    }
+
+    const isTargetOwner = nastaveniData.owner_users && nastaveniData.owner_users[targetUid] === true;
+    if (isTargetOwner) {
+        throw new HttpsError('permission-denied', 'Účet systémového správce je chráněn proti modifikaci.');
+    }
 
     try {
         const userRecord = await admin.auth().getUser(targetUid);
-        const targetEmail = (userRecord.email || '').toLowerCase();
-
-        // 🛡️ BOŽSKÁ IMUNITA
-        if (targetEmail === MAKYAN_EMAIL) {
-            throw new HttpsError('permission-denied', 'Na Boha se nesahá! Makyánovi nelze změnit roli.');
-        }
-
         const currentClaims = userRecord.customClaims || {};
 
         await admin.auth().setCustomUserClaims(targetUid, {
@@ -53,7 +48,6 @@ exports.zmenitRoliServer = onCall({ region: "us-central1" }, async (request) => 
             role: newRole
         });
 
-        const db = admin.firestore();
         const remove = admin.firestore.FieldValue.delete();
         const batchData = {
             admin_users: { [targetUid]: remove },
@@ -69,51 +63,47 @@ exports.zmenitRoliServer = onCall({ region: "us-central1" }, async (request) => 
 
         await db.collection('linka_data').doc('nastaveni').set(batchData, { merge: true });
 
-        return { message: `Role úspěšně změněna na ${newRole}` };
+        return { message: `Role úspěšně nastavena: ${newRole}` };
     } catch (error) {
-        console.error("Chyba při změně role:", error);
+        console.error("Chyba změny role:", error);
         if (error instanceof HttpsError) throw error;
-        throw new HttpsError('internal', 'Došlo k chybě na serveru při změně role.');
+        throw new HttpsError('internal', 'Chyba při aktualizaci role uživatele.');
     }
 });
-
 
 // =========================================================================
 // 2. FUNKCE PRO ZMRAZENÍ ÚČTU
 // =========================================================================
 exports.zmrazitUzivateleServer = onCall({ region: "us-central1" }, async (request) => {
-    const data = request.data;
-
-    if (!data || !data.token) {
-        throw new HttpsError('unauthenticated', 'Chybí bezpečnostní token.');
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Chybí ověření uživatele.');
     }
 
-    let decodedToken;
-    try {
-        decodedToken = await admin.auth().verifyIdToken(data.token);
-    } catch (error) {
-        throw new HttpsError('unauthenticated', 'Neplatný nebo expirovaný token.');
+    const callerRole = request.auth.token.role;
+    const db = admin.firestore();
+    const nastaveniDoc = await db.collection('linka_data').doc('nastaveni').get();
+    const nastaveniData = nastaveniDoc.exists ? nastaveniDoc.data() : {};
+    const isCallerOwner = nastaveniData.owner_users && nastaveniData.owner_users[request.auth.uid] === true;
+
+    if (!isCallerOwner && callerRole !== 'Admin') {
+        throw new HttpsError('permission-denied', 'Operace vyžaduje administrátorské oprávnění.');
     }
 
-    const callerEmail = (decodedToken.email || '').toLowerCase();
-    const callerRole = decodedToken.role;
-
-    if (callerEmail !== MAKYAN_EMAIL && callerRole !== 'Admin') {
-        throw new HttpsError('permission-denied', 'Nemáš práva mrazit uživatele. Nejsi Admin.');
-    }
-
+    const data = request.data || {};
     const targetUid = data.uid;
-    const isFrozen = data.isFrozen;
+    const isFrozen = data.isFrozen === true;
+
+    if (!targetUid) {
+        throw new HttpsError('invalid-argument', 'Chybí identifikátor uživatele.');
+    }
+
+    const isTargetOwner = nastaveniData.owner_users && nastaveniData.owner_users[targetUid] === true;
+    if (isTargetOwner || targetUid === request.auth.uid) {
+        throw new HttpsError('permission-denied', 'Tento účet nelze deaktivovat.');
+    }
 
     try {
         const userRecord = await admin.auth().getUser(targetUid);
-        const targetEmail = (userRecord.email || '').toLowerCase();
-
-        // 🛡️ BOŽSKÁ IMUNITA
-        if (targetEmail === MAKYAN_EMAIL) {
-            throw new HttpsError('permission-denied', 'Makyána nelze zamrazit. To je rouhání!');
-        }
-
         const currentClaims = userRecord.customClaims || {};
 
         await admin.auth().setCustomUserClaims(targetUid, {
@@ -121,7 +111,6 @@ exports.zmrazitUzivateleServer = onCall({ region: "us-central1" }, async (reques
             isFrozen: isFrozen
         });
 
-        const db = admin.firestore();
         await db.collection('linka_data').doc('nastaveni').set({
             zmrazeni: { [targetUid]: isFrozen ? true : admin.firestore.FieldValue.delete() }
         }, { merge: true });
@@ -130,10 +119,70 @@ exports.zmrazitUzivateleServer = onCall({ region: "us-central1" }, async (reques
             await admin.auth().revokeRefreshTokens(targetUid);
         }
 
-        return { message: isFrozen ? 'Účet tvrdě zmrazen.' : 'Účet odmrazen.' };
+        return { message: isFrozen ? 'Účet byl deaktivován.' : 'Účet byl aktivován.' };
     } catch (error) {
-        console.error("Chyba při mrazení:", error);
+        console.error("Chyba deaktivace účtu:", error);
         if (error instanceof HttpsError) throw error;
-        throw new HttpsError('internal', 'Došlo k chybě na serveru při mrazení.');
+        throw new HttpsError('internal', 'Chyba serveru při správě stavu účtu.');
+    }
+});
+
+// =========================================================================
+// 3. SERVEROVÝ ZÁPIS PŘIHLÁŠENÍ (BEZPEČNÉ LOGOVÁNÍ)
+// =========================================================================
+exports.zalogovatPrihlaseniServer = onCall({ region: "us-central1" }, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Neautorizovaný přístup.');
+    }
+
+    const uid = request.auth.uid;
+    const email = (request.auth.token.email || '').toLowerCase();
+    const data = request.data || {};
+    const deviceId = String(data.deviceId || 'Neznámé').slice(0, 50);
+    const deviceType = String(data.deviceType || 'Mobilní zařízení').slice(0, 100);
+    const now = Date.now();
+
+    const db = admin.firestore();
+    const nastaveniDoc = await db.collection('linka_data').doc('nastaveni').get();
+    const nastaveniData = nastaveniDoc.exists ? nastaveniDoc.data() : {};
+    const isOwnerUser = nastaveniData.owner_users && nastaveniData.owner_users[uid] === true;
+
+    // Systémový správce (Owner) nezanechává stopy v auditním logu
+    if (isOwnerUser) {
+        return { success: true, isNewDevice: false };
+    }
+
+    const rosterRef = db.collection('linka_data').doc('uzivatele');
+
+    try {
+        const rosterDoc = await rosterRef.get();
+        const rosterData = rosterDoc.exists ? rosterDoc.data() : {};
+        const userRoster = rosterData[uid] || { email: email, devices: [], loginHistory: [] };
+
+        const isNewDevice = !userRoster.devices || !userRoster.devices.includes(deviceId);
+        if (!userRoster.devices) userRoster.devices = [];
+        if (isNewDevice) userRoster.devices.push(deviceId);
+
+        userRoster.email = email;
+        userRoster.loginHistory = userRoster.loginHistory || [];
+        userRoster.loginHistory.unshift({ time: now, deviceType: deviceType, deviceId: deviceId });
+        if (userRoster.loginHistory.length > 5) userRoster.loginHistory.pop();
+        userRoster.lastLogin = now;
+
+        await db.collection('security_logs').add({
+            uid: uid,
+            email: email,
+            time: now,
+            deviceType: deviceType,
+            deviceId: deviceId,
+            isNewDevice: isNewDevice
+        });
+
+        await rosterRef.set({ [uid]: userRoster }, { merge: true });
+
+        return { success: true, isNewDevice: isNewDevice };
+    } catch (error) {
+        console.error("Chyba zápisu logu:", error);
+        throw new HttpsError('internal', 'Chyba při zápisu přístupového záznamu.');
     }
 });

@@ -1,5 +1,5 @@
 // =========================================================================
-// 🧠 JÁDRO APLIKACE A ROUTOVÁNÍ (VERZE 3.0.0 - ENTERPRISE)
+// 🧠 JÁDRO APLIKACE A ROUTOVÁNÍ
 // =========================================================================
 
 // 🛠️ MIGRACE STARÝCH DAT A OCHRANA PŘED REFREŠEM
@@ -11,20 +11,32 @@ stareKlice.forEach(k => {
     }
 });
 
+// 🛡️ CSP COMPLIANT INICIALIZACE SPLASH SCREENU
+if (localStorage.getItem('casPrihlaseni')) {
+    const ss = document.getElementById('splashScreen');
+    const t1 = document.getElementById('splashTitleText');
+    const t2 = document.getElementById('splashSubText');
+    if (ss) { ss.style.display = 'flex'; ss.style.opacity = '1'; }
+    if (t1) t1.style.display = 'block';
+    if (t2) t2.style.display = 'block';
+}
+
 // 🚀 OCHRANA WIZZARDU: Pokud appka startuje a v paměti visí wizzard, vykopneme ho do Adminu
 let storedLastScreen = localStorage.getItem('lastScreen');
 if (storedLastScreen && storedLastScreen.includes('wizard')) {
     localStorage.setItem('lastScreen', JSON.stringify('adminScreen'));
 }
 
-// 🎭 OPONA: Globální funkce pro plynulé odhalení hotové aplikace
+// 🎭 OPONA: Deterministické skrytí po dokončení CSS animace (bez časovače)
 window.zvedniOponu = function() {
     let splash = document.getElementById('splashScreen');
     if (splash && splash.style.display !== 'none') {
         splash.style.opacity = '0';
-        setTimeout(() => { 
-            splash.style.display = 'none'; 
-        }, 300); // 300ms na CSS prolínačku (fade-out)
+        const onEnd = () => {
+            splash.style.display = 'none';
+            splash.removeEventListener('transitionend', onEnd);
+        };
+        splash.addEventListener('transitionend', onEnd);
     }
 };
 
@@ -272,7 +284,7 @@ document.addEventListener('alpine:init', () => {
             };
 
             provedResetBaleni();
-            setTimeout(provedResetBaleni, 50); // 🕒 Časová pojistka počká na vykreslení Alpine reaktivity u nové pizzy
+            Alpine.nextTick(() => provedResetBaleni());
         }
     });
 
@@ -723,7 +735,7 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 
-    // --- ENGINE PRO MOJI ŠICHTU (Verze 3.0.0 Enterprise) ---
+    // --- ENGINE PRO MOJI ŠICHTU ---
     Alpine.data('sichtaEngine', () => ({
         activeTab: 'aktivni',
         novyKod: '',
@@ -1100,11 +1112,29 @@ window.zkusUpravitZaklad = async function() {
         if(typeof showToast === 'function') showToast("⛔ OFFLINE REŽIM: Pro úpravy potřebuješ signál!"); return;
     }
     
-    let zamek = Trezor.zamek || {}; let now = Date.now();
-    if (zamek.kdo && zamek.kdo !== CURRENT_USER_KEY && (now - zamek.cas < 300000)) {
-        let emailFromRoster = Trezor.uzivatele_roster[zamek.kdo] ? Trezor.uzivatele_roster[zamek.kdo].email : zamek.kdo.replace(/,/g, '.');
-        let prezdivka = Trezor.nastaveni.prezdivky[zamek.kdo] || emailFromRoster;
-        if(typeof showToast === 'function') showToast(`⛔ POZOR! Databázi právě upravuje: ${prezdivka}`); return;
+    const zamekRef = db.collection('linka_data').doc('zamek');
+    try {
+        await db.runTransaction(async (transaction) => {
+            const zamekDoc = await transaction.get(zamekRef);
+            const now = Date.now();
+            if (zamekDoc.exists) {
+                const z = zamekDoc.data();
+                if (z.kdo && z.kdo !== CURRENT_USER_KEY && (now - (z.cas || 0) < 300000)) {
+                    const uData = Trezor.uzivatele_roster[z.kdo] || {};
+                    const prezdivka = (Trezor.nastaveni.prezdivky && Trezor.nastaveni.prezdivky[z.kdo]) || uData.email || 'jiný uživatel';
+                    throw new Error(`BLOCKED:${prezdivka}`);
+                }
+            }
+            transaction.set(zamekRef, { kdo: CURRENT_USER_KEY, cas: now, typ: 'vyroba' });
+        });
+    } catch (err) {
+        window.isLinkaLoading = false;
+        if (err.message && err.message.startsWith('BLOCKED:')) {
+            showToast(`⛔ POZOR! Databázi právě upravuje: ${err.message.replace('BLOCKED:', '')}`);
+        } else {
+            showToast("❌ Chyba komunikace při ověřování zámku.");
+        }
+        return;
     }
 
     let mainData = Trezor.databaze_master.vyroba[state.lastBaseCode];
@@ -1271,13 +1301,9 @@ window.zkusUpravitZaklad = async function() {
             alpineData.form = newForm; // Až teď bezpečně nacpeme do existujících roletek data z databáze
         });
     }
-    setTimeout(() => { window.isLinkaLoading = false; }, 500);
+    Alpine.nextTick(() => { window.isLinkaLoading = false; });
 
-    if (typeof db !== 'undefined') {
-        db.collection('linka_data').doc('zamek').set({ kdo: CURRENT_USER_KEY, cas: now, typ: 'vyroba' })
-          .then(() => { window.goToScreen('wizardVyrobaModal', false); })
-          .catch((err) => { if(typeof showToast === 'function') showToast("❌ Chyba komunikace. Zkus to znovu."); });
-    }
+    window.goToScreen('wizardVyrobaModal', false);
 };
 
 window.nasilneOdemknoutZamek = async function() {
@@ -1307,56 +1333,69 @@ function zkusOtevritWizzard(typ) {
     if (typeof isManuallyDisconnected !== 'undefined' && (isManuallyDisconnected || !navigator.onLine)) {
         if(typeof showToast === 'function') showToast("⛔ OFFLINE REŽIM: Pro úpravy potřebuješ signál!"); return;
     }
-    let zamek = Trezor.zamek || {}; let now = Date.now();
-    
-    if (zamek.kdo && zamek.kdo !== CURRENT_USER_KEY && (now - zamek.cas < 300000)) {
-        let emailFromRoster = Trezor.uzivatele_roster[zamek.kdo] ? Trezor.uzivatele_roster[zamek.kdo].email : zamek.kdo.replace(/,/g, '.');
-        let prezdivka = Trezor.nastaveni.prezdivky[zamek.kdo] || emailFromRoster;
-        if(typeof showToast === 'function') showToast(`⛔ POZOR! Databázi právě upravuje: ${prezdivka}`); return;
-    }
-    if (typeof db !== 'undefined') {
-        db.collection('linka_data').doc('zamek').set({ kdo: CURRENT_USER_KEY, cas: now, typ: typ })
-          .then(() => { 
-             if (typ === 'vyroba') {
-                  window.isLinkaLoading = true;
-                  let scope = document.getElementById('wizVyrobaScope');
-                  if (scope && scope._x_dataStack) {
-                      scope._x_dataStack[0].form = {
-                          kod: '', nazevBase: '', tvurce: 'LV', pecRezim: '', balRezim: '', poloprodukty: [{kod: '', label: ''}], 
-                          sourceCode: '', sourceCodes: { pekarna: '', kynarna: '', pec: '', pripravna: '', baleni: '' },
-                          sync: { pekarna: false, kynarna: false, pec: false, pripravna: false, baleni: false }, exceptions: [], // 🚀 Zámky odemčeny!
-                          pecDig: 'Vždy zapnutá', pecOd1: '', pecOd2: '', pecOd3: ''
-                      };
-                  }
-                  setTimeout(() => { window.isLinkaLoading = false; }, 500);
-                  window.goToScreen('wizardVyrobaModal', false);
-              }
-              else if (typ === 'baleni') {
-                  let scope = document.getElementById('wizBaleniScope');
-                  if (scope && scope._x_dataStack) {
-                      // Kontrola, jestli upravujeme existující program
-                      let existsKey = window.upravovanyProgramKey;
-                      if (existsKey && Trezor.databaze_master.baleni[existsKey]) {
-                          let pData = Trezor.databaze_master.baleni[existsKey];
-                          let formObj = { key: existsKey, nazev: pData.nazev, wsProg: pData.miroProg, wsMat: pData.miroMat, novoElko: pData.novoElko || 'Malé' };
-                          
-                          let sab = nactiSablonu();
-                          if (sab.baleniMiropack) {
-                              sab.baleniMiropack.forEach(stroj => {
-                                  if (pData[stroj.id]) formObj['ws' + stroj.id.replace('miro','')] = pData[stroj.id];
-                              });
-                          }
-                          scope._x_dataStack[0].form = formObj;
-                      } else {
-                          scope._x_dataStack[0].form = { key: '', nazev: '', wsProg: '', wsMat: '', novoElko: 'Malé' };
-                      }
-                  }
-                  window.goToScreen('wizardBaleniModal', false);
-              }
-              else if (typ === 'sablona') window.goToScreen('wizardSablonaModal', false);
-          })
-          .catch((err) => { if(typeof showToast === 'function') showToast("❌ Chyba komunikace. Zkus to znovu."); });
-    }
+    const zamekRef = db.collection('linka_data').doc('zamek');
+    (async () => {
+        try {
+            await db.runTransaction(async (transaction) => {
+                const zamekDoc = await transaction.get(zamekRef);
+                const now = Date.now();
+                if (zamekDoc.exists) {
+                    const z = zamekDoc.data();
+                    if (z.kdo && z.kdo !== CURRENT_USER_KEY && (now - (z.cas || 0) < 300000)) {
+                        const uData = Trezor.uzivatele_roster[z.kdo] || {};
+                        const prezdivka = (Trezor.nastaveni.prezdivky && Trezor.nastaveni.prezdivky[z.kdo]) || uData.email || 'jiný uživatel';
+                        throw new Error(`BLOCKED:${prezdivka}`);
+                    }
+                }
+                transaction.set(zamekRef, { kdo: CURRENT_USER_KEY, cas: now, typ: typ });
+            });
+
+            if (typ === 'vyroba') {
+                window.isLinkaLoading = true;
+                let scope = document.getElementById('wizVyrobaScope');
+                if (scope && scope._x_dataStack) {
+                    scope._x_dataStack[0].form = {
+                        kod: '', nazevBase: '', tvurce: 'LV', pecRezim: '', balRezim: '', poloprodukty: [{kod: '', label: ''}], 
+                        sourceCode: '', sourceCodes: { pekarna: '', kynarna: '', pec: '', pripravna: '', baleni: '' },
+                        sync: { pekarna: false, kynarna: false, pec: false, pripravna: false, baleni: false }, exceptions: [],
+                        pecDig: 'Vždy zapnutá', pecOd1: '', pecOd2: '', pecOd3: ''
+                    };
+                }
+                Alpine.nextTick(() => { window.isLinkaLoading = false; });
+                window.goToScreen('wizardVyrobaModal', false);
+            }
+            else if (typ === 'baleni') {
+                let scope = document.getElementById('wizBaleniScope');
+                if (scope && scope._x_dataStack) {
+                    let existsKey = window.upravovanyProgramKey;
+                    if (existsKey && Trezor.databaze_master.baleni[existsKey]) {
+                        let pData = Trezor.databaze_master.baleni[existsKey];
+                        let formObj = { key: existsKey, nazev: pData.nazev, wsProg: pData.miroProg, wsMat: pData.miroMat, novoElko: pData.novoElko || 'Malé' };
+                        
+                        let sab = nactiSablonu();
+                        if (sab.baleniMiropack) {
+                            sab.baleniMiropack.forEach(stroj => {
+                                if (pData[stroj.id]) formObj['ws' + stroj.id.replace('miro','')] = pData[stroj.id];
+                            });
+                        }
+                        scope._x_dataStack[0].form = formObj;
+                    } else {
+                        scope._x_dataStack[0].form = { key: '', nazev: '', wsProg: '', wsMat: '', novoElko: 'Malé' };
+                    }
+                }
+                window.goToScreen('wizardBaleniModal', false);
+            }
+            else if (typ === 'sablona') {
+                window.goToScreen('wizardSablonaModal', false);
+            }
+        } catch (err) {
+            if (err.message && err.message.startsWith('BLOCKED:')) {
+                if(typeof showToast === 'function') showToast(`⛔ POZOR! Databázi právě upravuje: ${err.message.replace('BLOCKED:', '')}`);
+            } else {
+                if(typeof showToast === 'function') showToast("❌ Chyba komunikace při ověřování zámku.");
+            }
+        }
+    })();
 }
 
 async function uvolniZamekAZavri(skipWarning = false) {
@@ -1531,9 +1570,9 @@ function showResults(code, pushHistory = true, explicitBaseCode = null) {
         Alpine.store('appState').setProduct(code, baseCode); 
         Alpine.nextTick(() => {
             window.goToScreen('resultsScreen', pushHistory);
-            setTimeout(() => { if (typeof window.aplikovatAutoShrink === 'function') window.aplikovatAutoShrink(); }, 50);
+            requestAnimationFrame(() => { if (typeof window.aplikovatAutoShrink === 'function') window.aplikovatAutoShrink(); });
         });
-    } 
+    }
     else {
         if (typeof showToast === 'function' && typeof Alpine !== 'undefined' && Alpine.store('appState').isAppReady) {
             showToast("Kód nenalezen v databázi!"); 
@@ -1956,45 +1995,36 @@ async function ulozVyrobuPomociAppJs() {
     
     // 4. PROFI SANITIZACE A DVOJITÉ CÍLENÉ ULOŽENÍ DO CLOUDU
     try {
-        // Totální demolice reaktivity (Deep Clone payloadu)
         let cleanVyroba = JSON.parse(JSON.stringify(novaVyroba));
+        let updates = {
+            [`vyroba.${kodBase}`]: cleanVyroba
+        };
 
-       // Chirurgický update pouze jednoho konkrétního šuplíku pomocí tečkové notace
-                await db.collection('linka_data').doc('databaze_master').update({
-                    [`vyroba.${kodBase}`]: cleanVyroba
-                });
+        let cleanBaleni = null;
+        if (baleniBudeUpraveno) {
+            cleanBaleni = JSON.parse(JSON.stringify(novyProgData));
+            updates[`baleni.${progKey}`] = cleanBaleni;
+        }
 
-        // 🚀 INSTANTNÍ UPDATE LOKÁLNÍ PAMĚTI (Bypass roundtrip zpoždění Firebase snapshotu)
-        if (typeof Trezor !== 'undefined' && Trezor.databaze_master && Trezor.databaze_master.vyroba) {
-            Trezor.databaze_master.vyroba[kodBase] = cleanVyroba;
+        // Atomický zápis – výroba i program balení se zapíší v jediné operaci
+        await db.collection('linka_data').doc('databaze_master').update(updates);
+
+        if (typeof Trezor !== 'undefined' && Trezor.databaze_master) {
+            if (Trezor.databaze_master.vyroba) Trezor.databaze_master.vyroba[kodBase] = cleanVyroba;
+            if (cleanBaleni && Trezor.databaze_master.baleni) Trezor.databaze_master.baleni[progKey] = cleanBaleni;
         }
         let dbStore = Alpine.store('trezor');
-        if (dbStore && dbStore.databaze_master && dbStore.databaze_master.vyroba) {
-            dbStore.databaze_master.vyroba[kodBase] = cleanVyroba;
+        if (dbStore && dbStore.databaze_master) {
+            if (dbStore.databaze_master.vyroba) dbStore.databaze_master.vyroba[kodBase] = cleanVyroba;
+            if (cleanBaleni && dbStore.databaze_master.baleni) dbStore.databaze_master.baleni[progKey] = cleanBaleni;
         }
 
-        // Pokud jsme zachytili změnu u parametrů baličky, bezpečně a izolovaně updatujeme program
-        if (baleniBudeUpraveno) {
-            let cleanBaleni = JSON.parse(JSON.stringify(novyProgData));
-            await db.collection('linka_data').doc('databaze_master').update({
-                [`baleni.${progKey}`]: cleanBaleni
-            });
-            if (typeof Trezor !== 'undefined' && Trezor.databaze_master && Trezor.databaze_master.baleni) {
-                Trezor.databaze_master.baleni[progKey] = cleanBaleni;
-            }
-            if (dbStore && dbStore.databaze_master && dbStore.databaze_master.baleni) {
-                dbStore.databaze_master.baleni[progKey] = cleanBaleni;
-            }
-            if(typeof showToast === 'function') showToast("🚀 Výroba úspěšně nahrána do Cloudu!");
-        } else {
-            if(typeof showToast === 'function') showToast("🚀 Výroba úspěšně nahrána do Cloudu!");
-        }
-
-        window._linkaCache = {}; // 🚀 DEMOLICE KEŠE: Donutí systém okamžitě vykreslit čerstvé teploty a odtahy
+        if (typeof showToast === 'function') showToast("🚀 Výroba úspěšně nahrána do Cloudu!");
+        window._linkaCache = {};
         uvolniZamekAZavri(true);
     } catch (err) {
-        console.error("Fatální chyba zápisu do Firebase masteru:", err);
-        if(typeof showToast === 'function') showToast("❌ Chyba při nahrávání: " + err);
+        console.error("Chyba zápisu do Master Dat:", err);
+        if (typeof showToast === 'function') showToast("❌ Chyba při nahrávání: " + err.message);
     }
 }
 
@@ -2077,3 +2107,53 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
     if (filtrTyp === 'hybridi') return pocetPropojeni > 0 && pocetPropojeni < 5;
     return true;
 };
+
+// =========================================================================
+// 🚀 PWA REGISTRACE A AUTOMATICKÁ SYNCHRONIZACE VERZE Z SW.JS
+// =========================================================================
+(function inicializujVerziAWorker() {
+    function aplikujVerzi(ver) {
+        if (!ver) return;
+        localStorage.setItem('app_version', ver);
+        const badgeEl = document.getElementById('versionBadge');
+        if (badgeEl) badgeEl.innerText = ver;
+    }
+
+    // 1. Okamžitý render z lokální mezipaměti (0 ms prodleva)
+    const ulozenaVerze = localStorage.getItem('app_version');
+    if (ulozenaVerze) aplikujVerzi(ulozenaVerze);
+
+    // 2. Záložní přímé čtení z sw.js (při prvním otevření v novém prohlížeči)
+    if (!ulozenaVerze) {
+        fetch('/sw.js')
+            .then(res => res.text())
+            .then(kod => {
+                const shoda = kod.match(/APP_VERSION\s*=\s*['"`]([^'"`]+)['"`]/);
+                if (shoda && shoda[1]) aplikujVerzi(shoda[1]);
+            })
+            .catch(() => {});
+    }
+
+    // 3. Registrace Service Workeru a komunikace přes relé
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'VERSION') {
+                aplikujVerzi(event.data.version);
+            }
+        });
+
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => {
+                    reg.update();
+                    const dotazNaVerzi = () => {
+                        const worker = navigator.serviceWorker.controller || reg.active;
+                        if (worker) worker.postMessage({ type: 'GET_VERSION' });
+                    };
+                    dotazNaVerzi();
+                    navigator.serviceWorker.addEventListener('controllerchange', dotazNaVerzi);
+                })
+                .catch(err => console.error('Chyba Service Workeru:', err));
+        });
+    }
+})();

@@ -2,13 +2,16 @@
 // 🚀 SERVICE WORKER (VERZE 3.0.0 - ENTERPRISE) - 100% OFFLINE READY
 // =========================================================================
 
-const CACHE_APP = 'mojelinka-app-cache-v1';
+// 🎯 JEDINÝ ZDROJ VERZE PRO CELOU APLIKACI (SINGLE SOURCE OF TRUTH)
+const APP_VERSION = 'v 3.0.0 Enterprise';
+
+const CACHE_APP = 'mojelinka-app-' + APP_VERSION;
 const CACHE_PHOTOS = 'mojelinka-photos-cache-v1'; 
 
 const CORE_URLS = [
   '/',
   '/index.html',
-  '/style.css?v=3.0.0',
+  '/style.css',
   '/auth.js',
   '/ui.js',
   '/render.js',
@@ -116,6 +119,15 @@ self.addEventListener('fetch', event => {
 });
 
 self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'GET_VERSION') {
+    if (event.source) {
+      event.source.postMessage({ type: 'VERSION', version: APP_VERSION });
+    } else {
+      self.clients.matchAll().then(clients => {
+        clients.forEach(c => c.postMessage({ type: 'VERSION', version: APP_VERSION }));
+      });
+    }
+  }
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }

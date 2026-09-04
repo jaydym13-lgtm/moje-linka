@@ -1,5 +1,5 @@
 // =========================================================================
-// 📦 ZPRACOVÁNÍ A VYKRESLENÍ DAT (VERZE 3.0.0 - ENTERPRISE)
+// 📦 ZPRACOVÁNÍ A VYKRESLENÍ DAT
 // =========================================================================
 
 window.LINKA_DICT = {
@@ -63,7 +63,16 @@ const MIROPACK_LIST = [
 
 function vycistiText(text) {
     if (text === null || text === undefined) return '';
-    return text.toString().replace(/[&<>'"]/g, function(znak) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[znak]; });
+    const entityMap = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        '/': '&#x2F;',
+        '`': '&#x60;'
+    };
+    return String(text).replace(/[&<>"'`\/]/g, (char) => entityMap[char]);
 }
 
 function resolveAssetPath(filename) {

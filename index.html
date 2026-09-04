@@ -29,7 +29,7 @@
 
     <script defer src="lib/alpine.min.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=3.0.0">
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body id="appBody" x-data :class="{ 'edit-mode-active': $store.appState.isEditMode }">
@@ -38,8 +38,6 @@
               <img src="img/fotologoapkky.png" alt="Logo" class="splash-logo">
               <h2 id="splashTitleText" class="splash-title" style="display:none;">MOJE LINKA</h2>
               <div id="splashSubText" class="splash-subtitle" style="display:none;">Načítám data...</div>
-             
-        <script>if (localStorage.getItem('casPrihlaseni')) { var ss = document.getElementById('splashScreen'); ss.style.display = 'flex'; ss.style.opacity = '1'; document.getElementById('splashTitleText').style.display = 'block'; document.getElementById('splashSubText').style.display = 'block'; }</script>
          
     </div>
     <div id="topAnchor"></div>
@@ -515,7 +513,7 @@
                                 <div class="vip-user-header">
                                     <span class="vip-user-nick vip-history-link"
                                         @click="zobrazitHistoriiUzivatele(user.id)"
-                                        x-html="user.displayName + (user.role === 'Admin' ? ' 👑' : '') + (user.isFrozen ? ' ❄️' : '')"></span>
+                                        x-text="user.displayName + (user.role === 'Admin' ? ' 👑' : '') + (user.isFrozen ? ' ❄️' : '')"></span>
                                     <button class="vip-user-rename"
                                         @click="zmenitPrezdivku(user.id, user.displayName)">PŘEJMENOVAT</button>
                                 </div>
@@ -1899,60 +1897,41 @@
     <div id="eulaModalOverlay" class="modal-overlay">
         <div class="modal-box eula-box eula-box-inner">
             <h3 class="eula-title">VŠEOBECNÉ PROVOZNÍ PODMÍNKY</h3>
-            <div class="eula-subtitle">(Moje Linka - Verze 3.0.0 Enterprise)</div>
+            <div class="eula-subtitle">(Moje Linka - Provozní předpis)</div>
             <p class="eula-warn">Před vstupem do systému musíte odsouhlasit krutou realitu:</p>
 
             <div class="eula-content eula-text-content zebra-container">
                 <div class="alert-note alert-red mb-15">
                     <div class="alert-title">⚠️ ZÁKAZ SDÍLENÍ ÚČTŮ A HESEL ⚠️</div>
                     <div class="alert-text" style="font-size: 14px; line-height: 1.4; margin-top: 8px;">Každý uživatel
-                        má svůj vlastní účet. Sdílení přihlašovacích údajů s kýmkoliv dalším je přísně zakázáno. V
-                        případě odhalení sdíleného účtu dojde k okamžitému ZMRAZENÍ přístupu.<br><br><b
-                            style="font-size: 16px;">Jeden údržbář = jeden účet.</b></div>
+                        má svůj vlastní dedikovaný účet. Sdílení přístupových údajů třetím osobám je zakázáno bezpečnostní politikou. V
+                        případě detekce souběžných relací může dojít k bezpečnostní blokaci účtu.<br><br><b
+                            style="font-size: 15px;">Jednotlivý pracovník = jeden unikátní účet.</b></div>
                 </div>
                 <div class="zebra-block">
-                    <p><b>§1 Iluzornost Listu Výrobků (LV):</b> Uživatel bere na vědomí, že oficiální List Výrobků (LV)
-                        je často jen teoretický koncept a pohádka pro auditory. Skutečná pravda o tom, jak linka opravdu
-                        funguje, je uložena výhradně v této aplikaci pod štítkem "M" (Makyán).</p>
+                    <p><b>§1 Závaznost technologických dat:</b> Hodnoty uvedené v aplikaci slouží jako provozní předpis pro nastavení linky. V případě rozporu mezi systémem a fyzickým stavem linky je obsluha povinna informovat vedoucího směny.</p>
                 </div>
                 <div class="zebra-block">
-                    <p><b>§2 Pravidlo třídního boje a nakousnutého jablka:</b> Systém "Moje Linka Enterprise" byl s
-                        láskou a potem ukován pro tvrdě pracující lid s běžnými telefony na platformě Android. Pokud se
-                        považujete za nadčlověka a přistupujete k lince s iPhonem v ruce, berte na vědomí, že se
-                        aplikace k vám může občas chovat povýšeně (například vám bude ignorovat scrollování). S
-                        případnými stížnostmi na poskakující displej se prosím obracejte výhradně na prémiovou podporu
-                        ve své sociální vrstvě. Vývojář na tyto problémy nebere zřetel.</p>
+                    <p><b>§2 Hardwarové a systémové požadavky:</b> Aplikace je optimalizována pro mobilní provozní terminály. Zařízení musí mít povolené ukládání do mezipaměti pro správnou funkci v místech se slabým signálem.</p>
                 </div>
                 <div class="zebra-block">
-                    <p><b>§3 Návrat do doby papírové (Lex Ďoubek):</b> Pokud se vám tato aplikace nelíbí, nebo máte
-                        osobní problém s Makyánem, máte plné ústavní právo vrátit se k tradičnímu lovení nastavení z
-                        papírů od Michala Ďoubka. V takovém případě se ale tiše zavazujete nechat tyto papíry opět
-                        poházené úplně všude po fabrice a hlavně se pak nesmíte divit, že vám zase pořádně nefunguje
-                        kynárna.</p>
+                    <p><b>§3 Integrita receptur a auditní záznam:</b> Veškeré ruční úpravy technologických parametrů a programů jsou auditovány a ukládány s identifikátorem přihlášeného uživatele a časovou značkou.</p>
                 </div>
                 <div class="zebra-block">
-                    <p><b>§4 Kozlíkův balící paradox:</b> Pokud aplikujete nastavení pro balení do krabiček vytvořené
-                        Kozlíkem a Miropack vám místo elegantně složené krabičky vyplivne něco co jste nikdy neviděli
-                        nebo Novopac zavaří výrobek do fólie i s obsluhou, aplikace za to nenese absolutně žádnou
-                        odpovědnost.</p>
+                    <p><b>§4 Odpovědnost obsluhy:</b> Zadání parametrů do řídicích panelů strojů provádí kvalifikovaná obsluha. Aplikace plní funkci elektronické dokumentace a nenahrazuje fyzickou kontrolu bezpečnostních prvků linky.</p>
                 </div>
                 <div class="zebra-block">
-                    <p><b>§5 Pravidlo Absolutní Moci (a selského rozumu):</b> Makyán systém nastavil tak, aby fungoval.
-                        Pokud máte pocit, že aplikace ukazuje nesmysly, chyba je z 99 % na vaší straně. Než začnete
-                        nadávat a někoho s tím otravovat, zastavte se, umyjte si ruce, očistěte displej od kečupu,
-                        otřete si brýle a zkontrolujte, jestli jste to do té mašiny vůbec naťukali správně. Teprve až
-                        stoprocentně vyloučíte vlastní selhání, můžete přijít s dotazem. Zbytečné stížnosti a zdržování
-                        se neodpouští.</p>
+                    <p><b>§5 Hlášení neshod:</b> Jakoukoliv systémovou chybu nebo podezření na chybně zadanou hodnotu je uživatel povinen neprodleně nahlásit technologovi nebo administrátorovi systému.</p>
                 </div>
             </div>
-            <button class="action-btn btn-eula-agree" @click="souhlasimSeVsim()">✅ ČETL JSEM, SOUHLASÍM A UŽ MĚ S TÍM NEOTRAVUJ</button>
+            <button class="action-btn btn-eula-agree" @click="souhlasimSeVsim()">POTVRZUJI SEZNÁMENÍ A VSTUP DO SYSTÉMU</button>
         </div>
     </div>
 
     <div id="frozenModalOverlay" class="modal-overlay frozen-overlay" style="display: none;">
         <div class="modal-box frozen-box">
             <h3 class="frozen-title">⛔ ÚČET ZMRAZEN</h3>
-            <p class="frozen-text">Makyán ti dočasně zablokoval přístup k aplikaci. Tvoje lokální data byla zničena.</p>
+            <p class="frozen-text">Tento uživatelský účet byl z bezpečnostních důvodů dočasně deaktivován administrátorem.</p>
             <div class="alert-note alert-red frozen-alert">
                 <div class="alert-title">Přístup odepřen</div>
                 <div class="alert-text">Kontaktuj administrátora.</div>
@@ -2681,17 +2660,8 @@
     </div>
     </div>
 
-    <div class="version-badge">v 3.0.0 Enterprise</div>
+    <div id="versionBadge" class="version-badge"></div>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Motor offline režimu nahozen!'))
-                    .catch(err => console.error('Chyba motoru:', err));
-            });
-        }
-    </script>
 </body>
 
 </html>

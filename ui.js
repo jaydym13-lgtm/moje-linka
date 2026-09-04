@@ -1,5 +1,5 @@
 // =========================================================================
-// 🎨 UI KNIHOVNA (VERZE 3.0.0 - ENTERPRISE)
+// 🎨 UI KNIHOVNA
 // =========================================================================
 
 // --- PWA INSTALACE ---
@@ -299,11 +299,24 @@ function showCustomModal({ title, message = "", inputValue = "", type = "prompt"
       btnConfirm.innerText = "ANO, POTVRDIT"; btnConfirm.style.background = "#b91c1c";
     }
 
-    overlay.style.display = "flex"; setTimeout(() => overlay.classList.add('show'), 10);
-    if (type === "prompt") setTimeout(() => inputEl.focus(), 100);
-    if (type === "select") setTimeout(() => selectEl.focus(), 100);
+    overlay.style.display = "flex";
+    requestAnimationFrame(() => {
+        overlay.classList.add('show');
+        if (type === "prompt") inputEl.focus();
+        if (type === "select") selectEl.focus();
+    });
 
-    const close = (val) => { overlay.classList.remove('show'); setTimeout(() => { overlay.style.display = "none"; resolve(val); }, 200); btnConfirm.onclick = null; btnCancel.onclick = null; };
+    const close = (val) => {
+        overlay.classList.remove('show');
+        const onEnd = () => {
+            overlay.style.display = "none";
+            overlay.removeEventListener('transitionend', onEnd);
+            resolve(val);
+        };
+        overlay.addEventListener('transitionend', onEnd);
+        btnConfirm.onclick = null;
+        btnCancel.onclick = null;
+    };
     btnCancel.onclick = () => close(null); 
     
     btnConfirm.onclick = () => {
@@ -328,7 +341,7 @@ function toggleZoom(btn, containerId) {
     }
 }
 
-// --- ČISTÁ LOGIKA PRO EULU ---
+// --- ČISTÁ LOGIKA PRO EULU (BEZ ČASOVAČŮ) ---
 window.ukazEulaModal = function(force = true) {
     let hasAgreed = localStorage.getItem('eulaEnterprise3') === 'true';
     if (!hasAgreed || force) {
@@ -337,7 +350,7 @@ window.ukazEulaModal = function(force = true) {
             overlay.style.display = 'flex';
             let box = overlay.querySelector('.eula-box');
             if (box) box.scrollTop = 0; 
-            setTimeout(() => { overlay.classList.add('show'); }, 10);
+            requestAnimationFrame(() => { overlay.classList.add('show'); });
             
             if (!hasAgreed && wakeLock === null) toggleWakeLock(true);
         }
@@ -355,17 +368,19 @@ window.souhlasimSeVsim = function() {
 
     if (overlay) {
         overlay.classList.remove('show');
-        setTimeout(() => { 
-            overlay.style.display = 'none'; 
-            if (!wasAgreed) {
-                if (typeof showToast === 'function') showToast("Vítej! Nastav si aplikaci podle sebe.");
+        const onEnd = () => {
+            overlay.style.display = 'none';
+            overlay.removeEventListener('transitionend', onEnd);
+            if (!wasAgreed && typeof showToast === 'function') {
+                showToast("Vítej! Nastav si aplikaci podle sebe.");
             }
-        }, 200);
+        };
+        overlay.addEventListener('transitionend', onEnd);
     }
 };
 
 // =========================================================================
-// 🧠 CHYTRÁ KŘIŽOVATKA PRO MASTER DATA (VERZE 3.0.0 ENTERPRISE)
+// 🧠 CHYTRÁ KŘIŽOVATKA PRO MASTER DATA
 // =========================================================================
 
 window.resolveMasterTarget = function(editIdFull) {
@@ -579,18 +594,18 @@ window.editValue = async function(element) {
              }
 
              firebasePromise.then(() => { 
-               [Alpine.store('trezor'), typeof Trezor !== 'undefined' ? Trezor : null].forEach(st => {
-                   if (st && st.databaze_master) {
-                       let p = target.path.split('.'), o = st.databaze_master;
-                       for (let i = 0; i < p.length - 1; i++) { if(!o[p[i]]) o[p[i]] = {}; o = o[p[i]]; }
-                       delete o[p[p.length - 1]];
-                   }
-               });
-               let cacheKey = 'CP_' + Alpine.store('appState').lastBaseCode + '_' + Alpine.store('appState').activeCode;
-               if (window._linkaCache && window._linkaCache[cacheKey] && window._linkaCache[cacheKey].p) { delete window._linkaCache[cacheKey].p[editId]; }
-               element.innerHTML = "Zadat... " + (Alpine.store('appState').isEditor ? '<span class="edit-icon">✏️</span>' : '');
-               if(typeof showToast === 'function') showToast("Smazáno z Master Dat!"); 
-           }).catch(err => alert('Chyba: ' + err));
+                [Alpine.store('trezor'), typeof Trezor !== 'undefined' ? Trezor : null].forEach(st => {
+                    if (st && st.databaze_master) {
+                        let p = target.path.split('.'), o = st.databaze_master;
+                        for (let i = 0; i < p.length - 1; i++) { if(!o[p[i]]) o[p[i]] = {}; o = o[p[i]]; }
+                        delete o[p[p.length - 1]];
+                    }
+                });
+                let cacheKey = 'CP_' + Alpine.store('appState').lastBaseCode + '_' + Alpine.store('appState').activeCode;
+                if (window._linkaCache && window._linkaCache[cacheKey] && window._linkaCache[cacheKey].p) { delete window._linkaCache[cacheKey].p[editId]; }
+                element.innerHTML = "Zadat... " + (Alpine.store('appState').isEditor ? '<span class="edit-icon">✏️</span>' : '');
+                if(typeof showToast === 'function') showToast("Smazáno z Master Dat!"); 
+            }).catch(err => { if(typeof showToast === 'function') showToast("❌ Chyba: " + (err.message || err)); });
         } else {
              // 🚀 SECURE FIELD UPDATE: Pokud saháme do variant, přepíšeme lokální pole a pošleme ho Firebase jako celek!
              let firebasePromise;
@@ -625,7 +640,7 @@ window.editValue = async function(element) {
                  if (editId.startsWith('pecOd')) { element.innerHTML = "Potenciometr na " + newVal.trim(); } 
                  else { element.innerHTML = newVal.trim() + jednotka + (Alpine.store('appState').isEditor ? '<span class="edit-icon">✏️</span>' : ''); }
                  if(typeof showToast === 'function') showToast(`Zapsáno přímo do Master Dat!`); 
-             }).catch(err => alert('Chyba: ' + err));
+             }).catch(err => { if(typeof showToast === 'function') showToast("❌ Chyba: " + (err.message || err)); });
         }
   }
 }
@@ -695,7 +710,7 @@ async function rychleZmenitStav(stav, editIds) {
                 }
             });
             showToast(stav + " v Master Datech!");
-        }).catch(err => alert('Chyba: ' + err));
+        }).catch(err => { if(typeof showToast === 'function') showToast("❌ Chyba: " + (err.message || err)); });
     }
 }
 
@@ -744,7 +759,7 @@ async function rychleSmazat(editIdFull) {
             let el = document.querySelector(`[data-edit-id="${editIdFull}"]`);
             if (el) el.innerHTML = "Zadat... " + (Alpine.store('appState').isEditor ? '<span class="edit-icon">✏️</span>' : '');
             showToast("Smazáno z Master Dat!");
-        }).catch(err => alert('Chyba: ' + err));
+        }).catch(err => { if(typeof showToast === 'function') showToast("❌ Chyba: " + (err.message || err)); });
     }
 }
 
@@ -787,7 +802,7 @@ async function pridatVlastniPoznamku(kod, sekce) {
     let target = window.resolveMasterTarget(editId);
     if (target) {
         db.collection('linka_data').doc('databaze_master').update({ [target.path]: polePolozek })
-          .then(() => { showToast("Poznámka uložena do Master Dat!"); }).catch(err => alert('Chyba: ' + err));
+          .then(() => { showToast("Poznámka uložena do Master Dat!"); }).catch(err => { if(typeof showToast === 'function') showToast("❌ Chyba: " + (err.message || err)); });
     }
 }
 
@@ -810,14 +825,15 @@ async function pridatVlastniStroj(kod, sekce) {
     let target = window.resolveMasterTarget(editId);
     if (target) {
         db.collection('linka_data').doc('databaze_master').update({ [target.path]: polePolozek })
-          .then(() => { showToast("Stroj přidán do Master Dat!"); }).catch(err => alert('Chyba: ' + err));
+          .then(() => { showToast("Stroj přidán do Master Dat!"); }).catch(err => { if(typeof showToast === 'function') showToast("❌ Chyba: " + (err.message || err)); });
     }
 }
 
 async function smazatVlastniPolozku(kod, sekce, itemId) {
     if (typeof Alpine !== 'undefined') {
-        if (!Alpine.store('appState').isEditMode) return;
-        if (!Alpine.store('appState').isAdmin) { showToast("Pouze Admin může mazat položky!"); return; }
+        let state = Alpine.store('appState');
+        if (!state.isEditMode) return;
+        if (!state.isEditor && !state.isAdmin) { showToast("Nemáš práva k úpravám!"); return; }
     }
     if (typeof isManuallyDisconnected !== 'undefined' && (isManuallyDisconnected || !navigator.onLine)) {
         if(typeof showToast === 'function') showToast("⛔ OFFLINE REŽIM!"); return;
@@ -833,6 +849,6 @@ async function smazatVlastniPolozku(kod, sekce, itemId) {
     if (target) {
         let updateVal = newData.length === 0 ? firebase.firestore.FieldValue.delete() : newData;
         db.collection('linka_data').doc('databaze_master').update({ [target.path]: updateVal })
-          .then(() => showToast("Smazáno z Master Dat!")).catch(err => alert('Chyba: ' + err));
+          .then(() => showToast("Smazáno z Master Dat!")).catch(err => { if(typeof showToast === 'function') showToast("❌ Chyba: " + (err.message || err)); });
     }
 }
