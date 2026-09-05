@@ -702,75 +702,94 @@ function linkaEngine() {
 }
 
 // =========================================================================
-// 📏 AUTO-SHRINK SKENER (ENTERPRISE 3.0)
+// 📏 AUTO-SHRINK SKENER: 2D CANVAS ENGINE (CESTA 1)
 // =========================================================================
 window.aplikovatAutoShrink = function() {
-    let rows = document.querySelectorAll('.auto-shrink-row');
-    let allowedMax = window.innerWidth * 0.40; // 🛑 40% DISPLEJE = OBR
-    let normalMaxWidth = 0;
-    let obri = [];
+    const canvas = window._shrinkCanvas || (window._shrinkCanvas = document.createElement('canvas'));
+    const ctx = canvas.getContext('2d');
 
-    let isKatalog = document.getElementById('katalogDetailScreen') && document.getElementById('katalogDetailScreen').style.display !== 'none';
-    if (isKatalog) {
-        rows.forEach(row => row.classList.add('auto-shrink-ready'));
-        return; // V Katalogu řídí rozložení čistě CSS 68/32, gumičku vypínáme
-    }
+    const activeScreen = document.querySelector('.data-screen:not([style*="display: none"])') || document.body;
+    const container = activeScreen.querySelector('.app-container') || document.querySelector('.app-container');
+    const containerWidth = container ? container.clientWidth : Math.min(window.innerWidth, 1000);
+    const availableInnerWidth = Math.max(containerWidth - 26, 200);
 
-    // 1. Změření všech hodnot a nalezení nejdelšího normálního slova
-    rows.forEach(row => {
-        // ⚠️ POJISTKA: Vyřazujeme Lupu a TABULKU PECE z výpočtu lajny
-        if (row.querySelector('.btn-lupa-inline') || row.closest('.pec-zongrid')) {
-            row.classList.add('auto-shrink-ready');
-            return;
-        }
-        
-        let hodnotaEl = row.querySelector('.hodnota');
-        if (hodnotaEl) {
-            let isMiropack = row.closest('.miropack-data') !== null;
-            let isLarge = row.closest('.large-text') !== null;
-            let defaultSize = hodnotaEl.classList.contains('comp-new-stacked') ? 15 : 16;
-            
-            if (isMiropack && !isLarge) defaultSize = 12; // Záchrana pro malý Miropack ve Výrobě
-            
-            hodnotaEl.style.fontSize = defaultSize + 'px';
-            hodnotaEl.style.width = 'auto'; 
+    const rows = document.querySelectorAll('.data-row .row-content.grid-standard, .grid-standard');
+    if (!rows.length) return;
 
-            let targetTextEl = hodnotaEl.querySelector('.comp-new-stacked') || hodnotaEl;
-            let currentWidth = hodnotaEl.scrollWidth;
+    rows.forEach(row => {
+        if (row.classList.contains('grid-row-lupa') || row.closest('.pec-zongrid')) return;
 
-            if (currentWidth > allowedMax) {
-                obri.push({ el: hodnotaEl, textEl: targetTextEl, defSize: defaultSize });
-            } else {
-                if (currentWidth > normalMaxWidth) {
-                    normalMaxWidth = currentWidth;
+        const isKatalog = row.closest('#katalogDetailScreen') !== null;
+        const leftRatio = isKatalog ? 0.68 : 0.60;
+        const rightRatio = isKatalog ? 0.32 : 0.40;
+        const gap = isKatalog ? 8 : 20;
+
+        // Pokud je řádek rozbalený, změříme jeho reálnou šířku v DOMu
+        const rowWidth = (row.clientWidth && row.clientWidth > 50) ? row.clientWidth : availableInnerWidth;
+        const totalNetWidth = Math.max(rowWidth - gap, 100);
+
+        // 4px bezpečnostní nárazník proti nechtěným třem tečkám na hraně
+        const maxLeftWidth = Math.floor(totalNetWidth * leftRatio) - 4;
+        const maxRightWidth = Math.floor(totalNetWidth * rightRatio) - 4;
+
+        const baseFontSize = 15;
+        const minFontSize = 10; // Posunuto z 11 na 10 pro dlouhé montážní texty
+
+        // 1. Levý sloupec (název stroje / montážní parametr)
+        const popisEl = row.querySelector('.popis');
+        if (popisEl) {
+            const text = (popisEl.textContent || '').replace(/[✏️📷]/g, '').trim();
+            if (text) {
+                ctx.font = `bold ${baseFontSize}px "Segoe UI", sans-serif`;
+                const textWidth = ctx.measureText(text).width;
+
+                if (textWidth > maxLeftWidth) {
+                    const newSize = Math.max(minFontSize, Math.floor((maxLeftWidth / textWidth) * baseFontSize * 10) / 10);
+                    popisEl.style.fontSize = newSize + 'px';
+                } else {
+                    popisEl.style.fontSize = '';
+                }
+            }
+        }
+
+        // 2. Pravý sloupec (hodnota / nastavení)
+        const hodnotaEl = row.querySelector('.hodnota');
+        if (hodnotaEl) {
+            const targetTextEl = hodnotaEl.querySelector('.comp-new-stacked') 
+                              || hodnotaEl.querySelector('.diff-new') 
+                              || hodnotaEl;
+
+            const hasPhotoIcon = hodnotaEl.querySelector('.foto-inline-icon') !== null;
+            const hasPhotoBtn = hodnotaEl.querySelector('.foto-hodnota-btn') !== null;
+            const reservedPhotoSpace = hasPhotoBtn ? 45 : (hasPhotoIcon ? 22 : 0);
+            const allowedRightWidth = maxRightWidth - reservedPhotoSpace;
+
+            const text = (targetTextEl.textContent || '').replace(/[✏️📷]/g, '').trim();
+            if (text) {
+                ctx.font = `bold ${baseFontSize}px "Segoe UI", sans-serif`;
+                const textWidth = ctx.measureText(text).width;
+
+                if (textWidth > allowedRightWidth) {
+                    const newSize = Math.max(minFontSize, Math.floor((allowedRightWidth / textWidth) * baseFontSize * 10) / 10);
+                    targetTextEl.style.fontSize = newSize + 'px';
+                } else {
+                    targetTextEl.style.fontSize = '';
                 }
             }
         }
     });
-
-    // 2. Vytvoření ocelové osy (přidáme 2px rezervu)
-    let finalniSirka = normalMaxWidth > 0 ? (normalMaxWidth + 2) : 100;
-    document.documentElement.style.setProperty('--dynamic-val-width', finalniSirka + 'px');
-
-    // 3. Gilotina na Obry (zmenšování do osy nebo tečky)
-    obri.forEach(obr => {
-        let el = obr.el;
-        let targetTextEl = obr.textEl;
-        let currentSize = obr.defSize;
-        let minSize = 11;
-        el.style.width = finalniSirka + 'px'; 
-        
-        while (el.scrollWidth > finalniSirka && currentSize > minSize) {
-            currentSize--;
-            targetTextEl.style.fontSize = currentSize + 'px';
-        }
-    });
-
-    // 4. Finální odhalení (vše slícováno na milimetr)
-    requestAnimationFrame(() => {
-        rows.forEach(row => row.classList.add('auto-shrink-ready'));
-    });
 };
+
+// Automatické spuštění při změně velikosti okna nebo rozkliknutí libovolného akordeonu
+if (!window._shrinkListenersBound) {
+    window._shrinkListenersBound = true;
+    window.addEventListener('resize', () => window.aplikovatAutoShrink());
+    document.addEventListener('toggle', (e) => {
+        if (e.target && e.target.tagName === 'DETAILS' && e.target.open) {
+            window.aplikovatAutoShrink();
+        }
+    }, true);
+}
 
 // =========================================================================
 // 👑 VIP IKONY PRO DATABÁZI VÝROB

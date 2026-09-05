@@ -362,7 +362,7 @@ button.variant-btn { background-color: #2563eb; margin-top: 10px; transition: tr
 .btn-omal-del { color: #b91c1c; }
 body.dark-mode .btn-omal-zap { color: #22c55e; }
 .data-row.edit-wrapper { flex-direction: column; align-items: flex-start; }
-.data-row.edit-wrapper > div.row-content { display: flex; justify-content: space-between; width: 100%; align-items: center; }
+.data-row.edit-wrapper > div.row-content { width: 100%; }
 
 /* --- PANELY VÝROBY A BALENÍ --- */
 .product-group, .baleni-group { display: none; margin-top: 5px; }
@@ -470,10 +470,7 @@ details.machine.no-change > summary:after { content: ''; }
 .popis { font-weight: bold; color: var(--c-text-main); text-shadow: var(--ts-popis); flex-shrink: 0; }
 .hodnota { text-align: right; font-weight: bold; color: var(--c-text-main); text-shadow: var(--ts-popis); position: relative;}
 
-/* Flexbox pro zalamování */
-.data-row .row-content { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: nowrap; gap: 10px; }
-.data-row .hodnota { display: flex; justify-content: flex-end; align-items: center; flex-wrap: nowrap; min-width: 0; flex-grow: 1; gap: 8px; }
-.diff-new { color: #15803d; font-weight: 900; font-size: 16px; flex-shrink: 0; white-space: nowrap; }
+.diff-new { color: #15803d; font-weight: 900; font-size: inherit; flex-shrink: 0; white-space: nowrap; }
 
 /* SKRYTÍ "M" ODZNAKU NA LEVÉ STRANĚ VE SROVNÁVAČI */
 .diff-old .zdroj-badge { display: none !important; }
@@ -1598,13 +1595,15 @@ body.dark-mode .comp-elegant .elegant-sub-subtitle-row .elegant-sub-half:last-ch
     margin-bottom: 0;
 }
 .comp-baleni-nadpis {
-    /* Čistý nadpis, BEZ čáry pod textem! */
     font-weight: 900;
     color: var(--c-primary);
     text-transform: uppercase;
     font-size: 15px;
-    margin-top: 10px;
-    margin-bottom: 5px;
+    margin: 10px auto 6px auto;
+    width: fit-content;
+    text-align: center;
+    border-bottom: 2px solid var(--c-primary);
+    padding-bottom: 0px;
 }
 
 /* Doladění Wizzardů z Fáze 3 */
@@ -1686,129 +1685,127 @@ body.dark-mode .is-locked-input select {
 /* 📐 ENTERPRISE GRID SYSTÉM (VÝROBA A SROVNÁVAČ) */
 /* ========================================================================= */
 
-/* Běžné stroje (Flexbox řízený JavaScriptem) */
+/* Běžné stroje: Nativní CSS Grid bez přebíjení (2fr = 40 %, 3fr = 60 %) */
+.data-row .row-content.grid-standard,
 .grid-standard {
-    display: flex !important;
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+    box-sizing: border-box;
+}
+
+/* Speciální řádek pro Lupu v Miropacku zůstává pružný flexbox */
+.data-row .row-content.grid-standard.grid-row-lupa,
+.grid-standard.grid-row-lupa {
+    display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    gap: 16px;
 }
 
-/* ========================================================================= */
-/* 📐 ENTERPRISE GRID SYSTÉM PRO MIROPACK A KATALOG (68/32) */
-/* ========================================================================= */
-
-/* Pevná mřížka pro Miropack ve výrobě, Katalogu balení a Srovnávači balení */
-/* 📐 DOKONALÁ SVISLÁ OSA: Posunutý bod zlomu pro Katalog (hodnoty lícují zleva) */
-#katalogDetailScreen .miropack-data .grid-standard {
-    display: grid !important;
-    grid-template-columns: 68% 32% !important; /* Levý sloupec kratší, pravý má dost místa */
-    column-gap: 8px !important;
+/* Pevná mřížka pro Miropack v Katalogu balení */
+#katalogDetailScreen .miropack-data .row-content.grid-standard {
+    grid-template-columns: minmax(0, 68%) minmax(0, 32%);
+    column-gap: 8px;
 }
 #katalogDetailScreen .miropack-data .grid-standard .hodnota {
     width: 100%;
-    flex: none;
-    margin-right: 0;
     justify-content: flex-start;
     text-align: left;
 }
 
-/* Ochrana popisků proti přetečení */
+/* Levý sloupec (název stroje): Zabírá přesně svých 40 % */
 .grid-standard .popis, 
 #kat-miro-container .row-content:not(.grid-row-lupa) .popis,
 #vip-baleni-linka .comp-row-flex:not(.grid-row-lupa) .popis {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: flex;
-    align-items: center;
+    display: block;
     min-width: 0;
+    font-size: 15px;
+    text-align: left;
 }
 
-/* 🧊 ZÁCHRANA PECE: Vracíme mřížku pro zóny pečení, aby nelétala v luftu */
+/* Zóny pece: Ponechána přesná 4-sloupcová tabulka */
+.pec-zongrid .row-content.grid-standard,
 .pec-zongrid .grid-standard {
-    display: grid !important;
-    grid-template-columns: 1fr 70px 70px 70px !important;
-    gap: 6px !important;
+    grid-template-columns: 1fr 70px 70px 70px;
+    gap: 6px;
 }
 .pec-zongrid .grid-standard .hodnota {
-    width: auto !important;
-    flex: none !important;
-    justify-content: center !important;
+    width: auto;
+    justify-content: center;
+    text-align: center;
 }
 
-/* Ocelový pravý sloupec pro standardní výrobu (PŘILEPENO K OKRAJI) */
+/* Pravý sloupec (hodnota): Začíná přesně na svislé ose (40 %) a píše se doprava */
+.data-row .row-content.grid-standard .hodnota,
 .grid-standard .hodnota {
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* Gilotina pro Obry */
+    text-overflow: ellipsis;
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Nástup zleva na pevnou osu */
+    justify-content: flex-start;
     text-align: left;
-    width: var(--dynamic-val-width, auto);
-    flex: 0 0 var(--dynamic-val-width, auto);
+    width: 100%;
     min-width: 0;
-    margin-right: 0px; /* 🏁 ENTERPRISE 3.1: Totální nálet k pravému rámečku */
-}
-
-/* Miropack hodnoty a Katalog balení (Nástup na 68 % a přicucnutí doprava) */
-/* Změna klipování textu u Katalogu (zarovnání vlevo natvrdo) */
-#katalogDetailScreen .miropack-data .grid-standard .hodnota {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: clip;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    text-align: left;
-    min-width: 0;
+    font-size: 15px;
 }
 
 /* ------------------------------------------------ */
 /* 🏛️ PATROVÝ SROVNÁVAČ (Detailní režim) */
 /* ------------------------------------------------ */
+.data-row .row-content.grid-standard .hodnota.comp-col-stacked,
+.grid-standard .hodnota.comp-col-stacked,
 .comp-col-stacked {
     display: flex;
     flex-direction: column;
-    align-items: flex-start !important; /* TVRDÝ NÁSTUP ZLEVA NA SVATOU OSU */
+    align-items: flex-start;
     justify-content: center;
-    line-height: 1.1;
+    text-align: left;
+    line-height: 1.15;
     width: 100%;
     gap: 1px;
 }
 
 .comp-old-stacked {
-    font-size: 10px !important;
-    color: #334155; /* 🧠 Úprava: Pořádná tmavá břidlicová šedá pro perfektní čitelnost */
+    font-size: 10px;
+    color: #64748b;
     text-decoration: line-through;
-    margin-bottom: 0px;
+    margin: 0;
+    padding: 0;
     display: block;
     width: 100%;
+    text-align: left;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* 🛡️ Pojistka: Přestěhovaná gilotina tří teček ze starého kódu */
+    text-overflow: ellipsis;
 }
 
-/* Pojistka pro noční směny, aby text v tmavém režimu nesplynul s pozadím */
 body.dark-mode .comp-old-stacked {
-    color: #94a3b8 !important; 
+    color: #94a3b8; 
 }
 
 .comp-new-stacked {
-    font-size: 15px !important; /* Mírně ztlačená zelená nová hodnota */
+    font-size: 15px;
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin: 0;
+    padding: 0;
 }
 
-/* Skrytí M badge ze Srovnávače, aby nerušil Auto-shrink a čitelnost */
-.comp-old-stacked .zdroj-badge { display: none !important; }
+.comp-old-stacked .zdroj-badge { display: none; }
 
 /* ------------------------------------------------ */
-/* 👻 NEVIDITELNOST (Ochrana proti probliknutí) */
+/* OKAMŽITÁ VIDITELNOST BEZ PROBLIKÁVÁNÍ */
 /* ------------------------------------------------ */
 .auto-shrink-row {
-    opacity: 0;
-    transition: opacity 0.2s ease-in;
+    opacity: 1;
 }
 .auto-shrink-ready {
     opacity: 1;
@@ -1872,5 +1869,27 @@ body[data-theme="dark"] .baleni-sekce-nadpis {
     .btn-lupa-inline {
         font-size: 11px !important;  /* Na mobilu ještě o chlup menší */
         padding: 3px 8px !important;
+    }
+}
+
+/* =========================================================================
+   🖥️ RESPONZIVNÍ ROZŠÍŘENÍ PRO TABLETY A PC (ČISTÉ BEZ IMPORTANT)
+   ========================================================================= */
+
+/* Tablet (od šířky 600 px) */
+@media (min-width: 600px) {
+    .app-container,
+    .header,
+    .search-wrapper {
+        max-width: 760px;
+    }
+}
+
+/* PC a velké monitory (od šířky 1024 px) */
+@media (min-width: 1024px) {
+    .app-container,
+    .header,
+    .search-wrapper {
+        max-width: 1000px;
     }
 }

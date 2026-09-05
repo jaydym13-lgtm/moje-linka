@@ -1047,8 +1047,7 @@ window.handleAppRouting = function(isLoggedIn) {
                         } else {
                             el._x_dataStack[0].executeCompareProgData(state.compareOld, state.compareNew);
                         }
-                        // AKTIVACE TEXTŮ VE SROVNÁVAČI
-                        setTimeout(() => { if (typeof window.aplikovatAutoShrink === 'function') window.aplikovatAutoShrink(); }, 100);
+                        if (typeof window.aplikovatAutoShrink === 'function') window.aplikovatAutoShrink();
                     }
                 } else if (state.activeCode) {
                     showResults(state.activeCode, false, state.lastBaseCode);
@@ -2119,22 +2118,11 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
         if (badgeEl) badgeEl.innerText = ver;
     }
 
-    // 1. Okamžitý render z lokální mezipaměti (0 ms prodleva)
+    // 1. Okamžitý render z lokální paměti
     const ulozenaVerze = localStorage.getItem('app_version');
     if (ulozenaVerze) aplikujVerzi(ulozenaVerze);
 
-    // 2. Záložní přímé čtení z sw.js (při prvním otevření v novém prohlížeči)
-    if (!ulozenaVerze) {
-        fetch('/sw.js')
-            .then(res => res.text())
-            .then(kod => {
-                const shoda = kod.match(/APP_VERSION\s*=\s*['"`]([^'"`]+)['"`]/);
-                if (shoda && shoda[1]) aplikujVerzi(shoda[1]);
-            })
-            .catch(() => {});
-    }
-
-    // 3. Registrace Service Workeru a komunikace přes relé
+    // 2. Registrace Service Workeru a živá aktualizace verze
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'VERSION') {
@@ -2145,13 +2133,32 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => {
-                    reg.update();
                     const dotazNaVerzi = () => {
-                        const worker = navigator.serviceWorker.controller || reg.active;
+                        const worker = navigator.serviceWorker.controller || reg.active || reg.installing;
                         if (worker) worker.postMessage({ type: 'GET_VERSION' });
                     };
-                    dotazNaVerzi();
+
+                    // Jakmile prohlížeč stáhne upravený sw.js, po aktivaci si hned vyžádá číslo verze
+                    reg.onupdatefound = () => {
+                        const newWorker = reg.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' || newWorker.state === 'activated') {
+                                    dotazNaVerzi();
+                                }
+                            });
+                        }
+                    };
+
+                    // Pokaždé když klikneš z editoru zpět do okna s aplikací, zkontroluje přítomnost změn v sw.js
+                    window.addEventListener('focus', () => reg.update());
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.visibilityState === 'visible') reg.update();
+                    });
+
                     navigator.serviceWorker.addEventListener('controllerchange', dotazNaVerzi);
+                    dotazNaVerzi();
+                    reg.update();
                 })
                 .catch(err => console.error('Chyba Service Workeru:', err));
         });

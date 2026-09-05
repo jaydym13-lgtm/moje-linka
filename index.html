@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="icon" type="image/png" href="img/favicon192.png">
     <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1a365d">
@@ -1071,16 +1072,9 @@
                                             <template x-for="item in miroList" :key="item.id">
                                                 <div class="data-row edit-wrapper"
                                                     :class="formatRow(item.id+'_'+currentProduct.code, currentProduct.p[item.id] || item.def).hide ? 'row-hidden' : ''">
-                                                    <div class="row-content grid-standard auto-shrink-row"
-                                                        :class="item.id === 'miroProg' ? 'grid-row-lupa w-100' : ''" style="position: relative;">
+                                                    <div class="row-content grid-standard auto-shrink-row">
                                                         <span class="popis" x-text="item.name"></span>
-                                                        <template x-if="item.id === 'miroProg'">
-                <div class="lupa-center">
-                    <button class="btn-lupa-inline" @click="toggleZoom($event.target, 'miropack-container-' + currentProduct.code)">🔍 ZVĚTŠIT</button>
-                </div>
-            </template>
                                                         <span class="hodnota"
-                                                            :class="item.id === 'miroProg' ? 'hodnota-right' : ''"
                                                             :data-edit-id="item.id !== 'miroProg' ? item.id+'_'+currentProduct.code : null"
                                                             @click="item.id !== 'miroProg' ? editValue($el) : null"
                                                             x-html="formatRow(item.id+'_'+currentProduct.code, currentProduct.p[item.id] || item.def).text + ($store.appState.isEditor && item.id !== 'miroProg' ? '<span class=\'edit-icon\'>✏️</span>' : '')"></span>
@@ -1309,11 +1303,8 @@
                                 class="tab-content active miropack-data bg-baleni comp-prog-content">
 
                                 <div class="data-row edit-wrapper" :style="$store.appState.compareDetailMode ? 'padding: 5px 0;' : ''">
-                                    <div class="row-content grid-standard grid-row-lupa auto-shrink-row" style="position: relative;">
-                                        <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
-                                            <span class="popis">Program</span>
-                                        </div>
-                                        <div class="lupa-center"><button class="btn-lupa-inline" @click="toggleZoom($event.target, 'vip-baleni-prog')">🔍 ZVĚTŠIT</button></div>
+                                    <div class="row-content grid-standard auto-shrink-row">
+                                        <span class="popis">Program</span>
                                         <span class="hodnota" :class="$store.appState.compareDetailMode ? 'comp-col-stacked' : ''">
                                             <s class="diff-old comp-old-stacked" x-show="$store.appState.compareDetailMode" x-text="result.oldProgNum"></s>
                                             <span class="diff-new" :class="$store.appState.compareDetailMode ? 'comp-new-stacked' : ''" x-text="result.newProgNum"></span>
@@ -1456,17 +1447,11 @@
                                                     <div class="comp-baleni-rows">
                                                         <template x-for="(r, rIdx) in grp.rows" :key="'r'+rIdx">
                                                             <div class="data-row edit-wrapper" :style="$store.appState.compareDetailMode ? 'padding: 5px 0;' : ''">
-                                                                <div class="row-content grid-standard auto-shrink-row" :class="r.isProg ? 'grid-row-lupa' : ''" style="position: relative;">
-                                                                <div style="display:flex; align-items:center; gap:8px; overflow:hidden;" x-show="r.isProg">
+                                                                <div class="row-content grid-standard auto-shrink-row">
                                                                     <span class="popis" x-text="r.label"></span>
-                                                                </div>
-                                                                <span class="popis" x-show="!r.isProg" x-text="r.label"></span>
-                                                                <template x-if="r.isProg">
-                                                                    <div class="lupa-center"><button class="btn-lupa-inline" @click="toggleZoom($event.target, 'vip-baleni-linka')">🔍 ZVĚTŠIT</button></div>
-                                                                </template>
-                                                                <span class="hodnota" :class="$store.appState.compareDetailMode ? 'comp-col-stacked' : ''">
-                                                                            <s class="diff-old comp-old-stacked" x-show="$store.appState.compareDetailMode" x-html="r.oldVal"></s>
-                                                                            <span class="diff-new" :class="$store.appState.compareDetailMode ? 'comp-new-stacked' : ''">
+                                                                    <span class="hodnota" :class="$store.appState.compareDetailMode ? 'comp-col-stacked' : ''">
+                                                                        <s class="diff-old comp-old-stacked" x-show="$store.appState.compareDetailMode" x-html="r.oldVal"></s>
+                                                                        <span class="diff-new" :class="$store.appState.compareDetailMode ? 'comp-new-stacked' : ''">
                                                                             <template x-if="r.photoUrl">
                                                                                 <span @click="toggleFoto(r.photoId)" style="cursor:pointer;" class="d-contents">
                                                                                     <span x-html="r.newVal"></span><span class="foto-inline-icon">📷</span>
@@ -1597,12 +1582,7 @@
                         <template x-for="item in window.linkaEngine().miroList" :key="item.id">
                         <div class="data-row edit-wrapper">
                             <div class="row-content grid-standard">
-                                <span class="popis" :class="item.id === 'miroProg' ? 'katalog-detail-label' : ''">
-                                    <span x-text="item.name"></span>
-                                    <template x-if="item.id === 'miroProg'">
-                                        <button class="btn-lupa-inline" style="margin-left: auto; margin-right: auto;" @click="toggleZoom($event.target, 'kat-miro-container')">🔍 ZVĚTŠIT</button>
-                                    </template>
-                                </span>
+                                <span class="popis" x-text="item.name"></span>
 
                                 <span class="hodnota"
                                     :class="item.id === 'miroProg' ? 'katalog-detail-val' : ''"
