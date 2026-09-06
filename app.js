@@ -2132,7 +2132,7 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
         let hadController = Boolean(navigator.serviceWorker.controller);
         let reloading = false;
 
-        // 🔄 AUTOMATICKÝ RELOAD: Jakmile nový worker aktivuje a smaže starou keš, stránka se sama restartuje
+        // 🔄 AUTOMATICKÝ RELOAD: Jakmile nový worker převezme vládu, stránka se sama restartuje
         navigator.serviceWorker.addEventListener('controllerchange', () => {
             if (!hadController) {
                 hadController = true;
@@ -2152,24 +2152,25 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => {
-                    const dotazNaVerzi = () => {
-                        const worker = navigator.serviceWorker.controller || reg.active || reg.installing;
+                    const dotazNaVerzi = (targetWorker) => {
+                        // 🎯 Vždy se prioritně ptáme přicházejícího nového workera, ne toho starého
+                        const worker = targetWorker || reg.installing || reg.waiting || reg.active || navigator.serviceWorker.controller;
                         if (worker) worker.postMessage({ type: 'GET_VERSION' });
                     };
 
-                    // Detekce nového SW a vyžádání verze po instalaci
+                    // Detekce nového SW: Okamžité vyžádání čísla verze přímo z nového souboru
                     reg.onupdatefound = () => {
                         const newWorker = reg.installing;
                         if (newWorker) {
+                            dotazNaVerzi(newWorker);
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' || newWorker.state === 'activated') {
-                                    dotazNaVerzi();
+                                    dotazNaVerzi(newWorker);
                                 }
                             });
                         }
                     };
 
-                    // Kontrola aktualizací při návratu do okna
                     window.addEventListener('focus', () => reg.update());
                     document.addEventListener('visibilitychange', () => {
                         if (document.visibilityState === 'visible') reg.update();

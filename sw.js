@@ -3,7 +3,7 @@
 // =========================================================================
 
 // 🎯 JEDINÝ ZDROJ VERZE PRO CELOU APLIKACI (SINGLE SOURCE OF TRUTH)
-const APP_VERSION = 'v 3.0.3 Enterprise';
+const APP_VERSION = 'v 3.0.1 Enterprise';
 
 const CACHE_APP = 'mojelinka-app-' + APP_VERSION;
 const CACHE_PHOTOS = 'mojelinka-photos-cache-v1'; 
@@ -60,15 +60,27 @@ const PHOTO_URLS = [
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    Promise.all([
-      caches.open(CACHE_APP).then(cache => {
-          return Promise.allSettled(CORE_URLS.map(url => cache.add(url)));
-      }),
-      caches.open(CACHE_PHOTOS).then(cache => {
-          return Promise.allSettled(PHOTO_URLS.map(url => cache.add(url)));
-      })
-    ])
+    caches.open(CACHE_APP).then(cache => {
+      // ⚡ Bleskové stažení jádra bez čekání na fotky a s obchvatem HTTP keše
+      return Promise.allSettled(
+        CORE_URLS.map(url =>
+          fetch(url, { cache: 'reload' }).then(res => {
+            if (res.ok) return cache.put(url, res);
+            throw new Error(`Nepodařilo se stáhnout ${url}`);
+          })
+        )
+      );
+    })
   );
+
+  // 📷 Fotky se v tichosti zkontrolují na pozadí, aniž by blokovaly spuštění nové verze
+  caches.open(CACHE_PHOTOS).then(photoCache => {
+    PHOTO_URLS.forEach(url => {
+      photoCache.match(url).then(hasPhoto => {
+        if (!hasPhoto) photoCache.add(url).catch(() => {});
+      });
+    });
+  });
 });
 
 self.addEventListener('activate', event => {
@@ -79,11 +91,14 @@ self.addEventListener('activate', event => {
           return caches.delete(cacheName);
         }
       })
-    )).then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ type: 'window' }))
-      .then(clients => {
-        clients.forEach(c => c.postMessage({ type: 'VERSION', version: APP_VERSION }));
-      })
+    ))
+    // 📢 1. Nejdříve pošleme novou verzi do paměti okna
+    .then(() => self.clients.matchAll({ type: 'window' }))
+    .then(clients => {
+      clients.forEach(c => c.postMessage({ type: 'VERSION', version: APP_VERSION }));
+    })
+    // 🚀 2. Teprve teď převezmeme řízení a odpálíme okamžitý reload
+    .then(() => self.clients.claim())
   );
 });
 
