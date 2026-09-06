@@ -111,7 +111,7 @@
 
         <!-- 📲 TLAČÍTKA PRO INSTALACI APLIKACE (PWA) -->
         <button class="btn-pwa-menu" x-show="$store.appState.canInstallPwa && !$store.appState.isStandalone"
-            @click="window.triggerPwaInstall()" x-cloak>📲 Stáhnout na plochu</button>
+            @click="window.triggerPwaInstall()" x-cloak>📲 Stáhnout jako aplikaci</button>
         <button class="btn-pwa-menu btn-pwa-ios" x-show="$store.appState.isIos && !$store.appState.isStandalone"
             @click="window.otevriNavodIphone()" x-cloak>📲 Instalace pro iPhone</button>
 
