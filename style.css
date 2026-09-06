@@ -159,10 +159,10 @@ body.dark-mode .side-menu { background: var(--bg-box); border-right: 1px solid #
 
 .side-menu button { 
   background: #1a365d; color: white; border: 1px solid rgba(255,255,255,0.8); 
-  padding: 0 15px; margin: 4px 15px; border-radius: 10px; font-size: 14px; 
+  padding: 0 12px; margin: 2px 15px; border-radius: 8px; font-size: 13px; 
   font-weight: bold; cursor: pointer; text-transform: uppercase; 
-  display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-  min-height: 42px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  min-height: 43px; box-sizing: border-box;
 }
 .side-menu button:active { transform: scale(0.98); }
 #sideMenu .btn-logout-menu { position: absolute; bottom: 55px; top: auto; left: 0; width: calc(100% - 30px); background: #b91c1c; border-color: #fca5a5; }
@@ -1323,8 +1323,8 @@ body.dark-mode .sablona-opt-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
-    margin: 10px 15px 15px 15px; /* Odskočení od krajů menu */
+    padding: 10px;
+    margin: 5px 15px 8px 15px; /* Odskočení od krajů menu */
     background: linear-gradient(145deg, #1e293b, #0f172a); /* Luxusní tmavý přechod */
     border-radius: 12px; /* Zaoblené rohy kartičky */
     border: 1px solid rgba(255, 255, 255, 0.15); /* Jemný glass rámeček */
@@ -1892,4 +1892,113 @@ body[data-theme="dark"] .baleni-sekce-nadpis {
     .search-wrapper {
         max-width: 1000px;
     }
+}
+
+/* ========================================================================= */
+/* --- 📱 LOGIN SCREEN: ZDVIŽENÍ A VYCENTROVÁNÍ PRO TABLETY A PC --- */
+/* ========================================================================= */
+
+/* Tablet (od 600 px) */
+@media (min-width: 600px) {
+    .bg-photo {
+        background-size: cover;
+        background-position: center top;
+        padding-top: 25px;
+    }
+
+    .hero-title {
+        font-size: 46px;
+        letter-spacing: 3px;
+        margin-bottom: 12px;
+    }
+
+    .content-box.login-content-box {
+        margin-top: 0;
+        max-width: 440px;
+        padding: 24px 25px;
+    }
+
+    .content-box .btn-login,
+    .content-box .btn-install {
+        width: 100%;
+        font-size: 17px;
+        padding: 14px;
+        margin-top: 14px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    .login-input-user,
+    .input-icon-wrapper input {
+        font-size: 17px;
+        padding: 14px;
+    }
+}
+
+/* PC a velké monitory (od 1024 px) */
+@media (min-width: 1024px) {
+    .bg-photo {
+        background-size: cover;
+        background-position: center 100%;
+        padding-top: 35px;
+    }
+
+    .hero-title {
+        font-size: 52px;
+        letter-spacing: 4px;
+        margin-bottom: 16px;
+    }
+
+    .content-box.login-content-box {
+        margin-top: 0;
+        max-width: 460px;
+        padding: 28px 30px;
+    }
+
+    .content-box .btn-login,
+    .content-box .btn-install {
+        width: 100%;
+        font-size: 18px;
+        padding: 15px;
+        margin-top: 15px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    .login-input-user,
+    .input-icon-wrapper input {
+        font-size: 18px;
+        padding: 15px;
+    }
+}
+
+/* ========================================================================= */
+/* --- 📲 TLAČÍTKA INSTALACE V BOČNÍM MENU --- */
+/* ========================================================================= */
+#sideMenu .btn-pwa-menu {
+    position: absolute;
+    bottom: 105px;
+    top: auto;
+    left: 0;
+    width: calc(100% - 30px);
+    background: #ea580c;
+    border: 1px solid #fbd38d;
+    color: white;
+}
+
+#sideMenu .btn-pwa-menu.btn-pwa-ios {
+    background: #0284c7;
+    border-color: #38bdf8;
+}
+
+.side-menu {
+    overflow-y: auto;
+    padding-bottom: 160px;
+    box-sizing: border-box;
 }

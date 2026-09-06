@@ -182,6 +182,11 @@ document.addEventListener('alpine:init', () => {
         isEditor: false,
         isAdmin: false,
 
+        // 📲 PWA detekce instalace a platforem
+        isStandalone: (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true),
+        canInstallPwa: false,
+        isIos: (/iphone|ipad|ipod/i.test(navigator.userAgent || '') && !window.MSStream),
+
         variantModal: {
             isOpen: false,
             baseCode: '',
@@ -2122,8 +2127,22 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
     const ulozenaVerze = localStorage.getItem('app_version');
     if (ulozenaVerze) aplikujVerzi(ulozenaVerze);
 
-    // 2. Registrace Service Workeru a živá aktualizace verze
+    // 2. Registrace Service Workeru, automatická obnova a čistka
     if ('serviceWorker' in navigator) {
+        let hadController = Boolean(navigator.serviceWorker.controller);
+        let reloading = false;
+
+        // 🔄 AUTOMATICKÝ RELOAD: Jakmile nový worker aktivuje a smaže starou keš, stránka se sama restartuje
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!hadController) {
+                hadController = true;
+                return;
+            }
+            if (reloading) return;
+            reloading = true;
+            window.location.reload();
+        });
+
         navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'VERSION') {
                 aplikujVerzi(event.data.version);
@@ -2138,7 +2157,7 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
                         if (worker) worker.postMessage({ type: 'GET_VERSION' });
                     };
 
-                    // Jakmile prohlížeč stáhne upravený sw.js, po aktivaci si hned vyžádá číslo verze
+                    // Detekce nového SW a vyžádání verze po instalaci
                     reg.onupdatefound = () => {
                         const newWorker = reg.installing;
                         if (newWorker) {
@@ -2150,13 +2169,12 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
                         }
                     };
 
-                    // Pokaždé když klikneš z editoru zpět do okna s aplikací, zkontroluje přítomnost změn v sw.js
+                    // Kontrola aktualizací při návratu do okna
                     window.addEventListener('focus', () => reg.update());
                     document.addEventListener('visibilitychange', () => {
                         if (document.visibilityState === 'visible') reg.update();
                     });
 
-                    navigator.serviceWorker.addEventListener('controllerchange', dotazNaVerzi);
                     dotazNaVerzi();
                     reg.update();
                 })
@@ -2164,3 +2182,65 @@ window.vyhovujeFiltrumMaster = function(baseCode, db, filtrTyp) {
         });
     }
 })();
+
+// =========================================================================
+// 📲 PWA INSTALACE A NÁVOD PRO APPLE
+// =========================================================================
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (typeof Alpine !== 'undefined' && Alpine.store('appState')) {
+        Alpine.store('appState').canInstallPwa = true;
+    }
+    const btnLoginInstall = document.getElementById('btnInstallPwa');
+    if (btnLoginInstall && !Alpine.store('appState')?.isStandalone) {
+        btnLoginInstall.style.display = 'flex';
+    }
+});
+
+window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    if (typeof Alpine !== 'undefined' && Alpine.store('appState')) {
+        Alpine.store('appState').canInstallPwa = false;
+        Alpine.store('appState').isStandalone = true;
+    }
+    const btnLoginInstall = document.getElementById('btnInstallPwa');
+    if (btnLoginInstall) btnLoginInstall.style.display = 'none';
+    if (typeof showToast === 'function') showToast("🎉 Aplikace byla úspěšně nainstalována na plochu!");
+});
+
+window.installPWA = window.triggerPwaInstall = async function() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+            if (typeof Alpine !== 'undefined' && Alpine.store('appState')) {
+                Alpine.store('appState').canInstallPwa = false;
+            }
+            const btnLoginInstall = document.getElementById('btnInstallPwa');
+            if (btnLoginInstall) btnLoginInstall.style.display = 'none';
+        }
+        deferredInstallPrompt = null;
+    } else {
+        if (typeof showToast === 'function') showToast("Instalace není dostupná nebo již proběhla.");
+    }
+};
+
+window.otevriNavodIphone = function() {
+    if (typeof showCustomModal === 'function') {
+        showCustomModal({
+            title: "📲 INSTALACE NA IPHONE",
+            message: "Aplikaci přidáš na plochu ve 3 krocích:<br><br>" +
+                     "1️⃣ V Safari dole klepni na tlačítko <b>Sdílet</b> (čtvereček se šipkou ⎋).<br><br>" +
+                     "2️⃣ V nabídce sjeď níže a zvol <b>Přidat na plochu</b> (➕).<br><br>" +
+                     "3️⃣ Vpravo nahoře klepni na <b>Přidat</b>.",
+            type: "alert"
+        });
+        const btnCancel = document.getElementById('modalBtnCancel');
+        const btnConfirm = document.getElementById('modalBtnConfirm');
+        if (btnCancel) btnCancel.style.display = 'none';
+        if (btnConfirm) btnConfirm.innerText = 'ROZUMÍM';
+    }
+};
