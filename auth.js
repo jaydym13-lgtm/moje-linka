@@ -15,8 +15,11 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// 🛡️ APP CHECK: Ochrana proti botům
+// 🛡️ APP CHECK: Ochrana proti botům a neautorizovaným skriptům
 try {
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    }
     const appCheck = firebase.appCheck();
     appCheck.activate(
       new firebase.appCheck.ReCaptchaEnterpriseProvider('6LdXN8osAAAAAKOg7I-tfffBrvBsvbkAQwf1v9Gm'),
@@ -74,7 +77,7 @@ document.addEventListener('alpine:init', () => {
         vyroba: {},
         baleni: {},
         upravy: {},
-        nastaveni: { vip_users: {}, vip_plus_users: {}, admin_users: {}, editor_users: {}, owner_users: {}, prezdivky: {}, zmrazeni: {}, sablona: null },
+        nastaveni: { vip_users: {}, vip_plus_users: {}, admin_users: {}, editor_users: {}, reader_users: {}, owner_users: {}, prezdivky: {}, zmrazeni: {}, sablona: null },
         uzivatele_roster: {},
         zamek: {},
         hlaseni: { id: "audit-01", isActive: false, text: "" },
@@ -87,6 +90,7 @@ document.addEventListener('alpine:init', () => {
                 ...Object.keys(this.nastaveni.vip_plus_users || {}),
                 ...Object.keys(this.nastaveni.admin_users || {}),
                 ...Object.keys(this.nastaveni.editor_users || {}),
+                ...Object.keys(this.nastaveni.reader_users || {}),
                 ...Object.keys(this.nastaveni.zmrazeni || {})
             ]);
             
@@ -102,11 +106,12 @@ document.addEventListener('alpine:init', () => {
 
                 if (safeKey.includes(',')) return;
 
-                let role = 'Reader';
+                let role = 'None';
                 if (this.nastaveni.admin_users && this.nastaveni.admin_users[safeKey]) role = 'Admin';
                 else if (this.nastaveni.editor_users && this.nastaveni.editor_users[safeKey]) role = 'Editor';
                 else if (this.nastaveni.vip_plus_users && this.nastaveni.vip_plus_users[safeKey]) role = 'VipPlus';
                 else if (this.nastaveni.vip_users && this.nastaveni.vip_users[safeKey]) role = 'Vip';
+                else if (this.nastaveni.reader_users && this.nastaveni.reader_users[safeKey]) role = 'Reader';
 
                 let isFrozen = this.nastaveni.zmrazeni && this.nastaveni.zmrazeni[safeKey] === true;
                 
@@ -215,6 +220,7 @@ function startDatabaseListener() {
         nast.vip_plus_users = nast.vip_plus_users || {};
         nast.admin_users = nast.admin_users || {};
         nast.editor_users = nast.editor_users || {};
+        nast.reader_users = nast.reader_users || {};
         nast.prezdivky = nast.prezdivky || {};
         nast.zmrazeni = nast.zmrazeni || {};
         nast.owner_users = nast.owner_users || {};
@@ -355,6 +361,7 @@ function applyUserRights() {
   let isEditor = isAdmin || (dbStore.nastaveni.editor_users && dbStore.nastaveni.editor_users[CURRENT_USER_KEY] === true);
   let isVipPlus = isEditor || (dbStore.nastaveni.vip_plus_users && dbStore.nastaveni.vip_plus_users[CURRENT_USER_KEY] === true);
   let isVip = isVipPlus || (dbStore.nastaveni.vip_users && dbStore.nastaveni.vip_users[CURRENT_USER_KEY] === true);
+  let isReader = isVip || (dbStore.nastaveni.reader_users && dbStore.nastaveni.reader_users[CURRENT_USER_KEY] === true);
   
   const body = document.getElementById('appBody');
   if (isVip) { body.classList.add('is-vip'); } else { body.classList.remove('is-vip'); }
@@ -377,14 +384,15 @@ function applyUserRights() {
   // === LOGIKA PRO PROFIL V MENU ===
   let profDiv = document.getElementById('menuUserProfile');
   if (profDiv && CURRENT_USER_KEY) {
-      let roleName = "Čtenář";
-      let roleClass = "";
-      let emoji = "👤"; // Výchozí panáček
+      let roleName = "Neschválen";
+      let roleClass = "badge-none";
+      let emoji = "⏳"; // Výchozí stav – čeká na schválení
 
       if (isAdmin) { roleName = "Administrátor"; roleClass = "badge-admin"; emoji = "👑"; }
       else if (isEditor) { roleName = "Editor"; roleClass = "badge-editor"; emoji = "🗝️"; }
       else if (isVipPlus) { roleName = "VIP Plus"; roleClass = "badge-vipplus"; emoji = "☄️"; }
       else if (isVip) { roleName = "VIP"; roleClass = "badge-vip"; emoji = "⭐"; }
+      else if (isReader) { roleName = "Čtenář"; roleClass = "badge-reader"; emoji = "👤"; }
 
       let uData = dbStore.uzivatele_roster[CURRENT_USER_KEY] || {};
       let customNick = (dbStore.nastaveni.prezdivky && dbStore.nastaveni.prezdivky[CURRENT_USER_KEY]) || uData.vlastniJmeno;

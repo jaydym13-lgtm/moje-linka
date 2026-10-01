@@ -8,7 +8,7 @@ admin.initializeApp();
 // =========================================================================
 // 1. FUNKCE PRO ZMĚNU ROLE
 // =========================================================================
-exports.zmenitRoliServer = onCall({ region: "us-central1" }, async (request) => {
+exports.zmenitRoliServer = onCall({ region: "us-central1", enforceAppCheck: true }, async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Chybí ověření uživatele.');
     }
@@ -28,7 +28,7 @@ exports.zmenitRoliServer = onCall({ region: "us-central1" }, async (request) => 
     const data = request.data || {};
     const targetUid = data.uid;
     const newRole = data.role;
-    const allowedRoles = ['Reader', 'Vip', 'VipPlus', 'Editor', 'Admin'];
+    const allowedRoles = ['None', 'Reader', 'Vip', 'VipPlus', 'Editor', 'Admin'];
 
     if (!targetUid || !newRole || !allowedRoles.includes(newRole)) {
         throw new HttpsError('invalid-argument', 'Neplatný požadavek na změnu role.');
@@ -45,21 +45,26 @@ exports.zmenitRoliServer = onCall({ region: "us-central1" }, async (request) => 
 
         await admin.auth().setCustomUserClaims(targetUid, {
             ...currentClaims,
-            role: newRole
+            role: newRole === 'None' ? null : newRole
         });
+
+        // Bleskové zneplatnění starých tokenů – nová role se projeví okamžitě
+        await admin.auth().revokeRefreshTokens(targetUid);
 
         const remove = admin.firestore.FieldValue.delete();
         const batchData = {
             admin_users: { [targetUid]: remove },
             editor_users: { [targetUid]: remove },
             vip_plus_users: { [targetUid]: remove },
-            vip_users: { [targetUid]: remove }
+            vip_users: { [targetUid]: remove },
+            reader_users: { [targetUid]: remove }
         };
 
         if (newRole === 'Admin') batchData.admin_users[targetUid] = true;
         if (newRole === 'Editor') batchData.editor_users[targetUid] = true;
         if (newRole === 'VipPlus') batchData.vip_plus_users[targetUid] = true;
         if (newRole === 'Vip') batchData.vip_users[targetUid] = true;
+        if (newRole === 'Reader') batchData.reader_users[targetUid] = true;
 
         await db.collection('linka_data').doc('nastaveni').set(batchData, { merge: true });
 
@@ -74,7 +79,7 @@ exports.zmenitRoliServer = onCall({ region: "us-central1" }, async (request) => 
 // =========================================================================
 // 2. FUNKCE PRO ZMRAZENÍ ÚČTU
 // =========================================================================
-exports.zmrazitUzivateleServer = onCall({ region: "us-central1" }, async (request) => {
+exports.zmrazitUzivateleServer = onCall({ region: "us-central1", enforceAppCheck: true }, async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Chybí ověření uživatele.');
     }
@@ -115,9 +120,8 @@ exports.zmrazitUzivateleServer = onCall({ region: "us-central1" }, async (reques
             zmrazeni: { [targetUid]: isFrozen ? true : admin.firestore.FieldValue.delete() }
         }, { merge: true });
 
-        if (isFrozen) {
-            await admin.auth().revokeRefreshTokens(targetUid);
-        }
+        // Okamžité zneplatnění tokenů při zmrazení i odmrazení
+        await admin.auth().revokeRefreshTokens(targetUid);
 
         return { message: isFrozen ? 'Účet byl deaktivován.' : 'Účet byl aktivován.' };
     } catch (error) {
@@ -130,7 +134,7 @@ exports.zmrazitUzivateleServer = onCall({ region: "us-central1" }, async (reques
 // =========================================================================
 // 3. SERVEROVÝ ZÁPIS PŘIHLÁŠENÍ (BEZPEČNÉ LOGOVÁNÍ)
 // =========================================================================
-exports.zalogovatPrihlaseniServer = onCall({ region: "us-central1" }, async (request) => {
+exports.zalogovatPrihlaseniServer = onCall({ region: "us-central1", enforceAppCheck: true }, async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Neautorizovaný přístup.');
     }

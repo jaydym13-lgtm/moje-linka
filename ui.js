@@ -57,6 +57,25 @@ document.addEventListener("DOMContentLoaded", () => {
             password.setAttribute('type', type); this.textContent = type === 'password' ? '👁️' : '🙈';
         });
     }
+
+    // 🛡️ OCHRANA PROTI EXPORTU: Blokace kontextového menu nad daty
+    document.addEventListener('contextmenu', (e) => {
+        if (!e.target.closest('input, textarea')) {
+            e.preventDefault();
+        }
+    });
+
+    // 🛡️ OCHRANA PROTI DEVTOOLS: Blokace klávesových zkratek F12, Ctrl+Shift+I/J/C, Ctrl+U
+    window.addEventListener('keydown', (e) => {
+        if (
+            e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) ||
+            (e.ctrlKey && ['U', 'u'].includes(e.key))
+        ) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
 });
 
 // --- GLOBÁLNÍ ROZBALENÍ ↕️ ---

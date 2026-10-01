@@ -29,16 +29,23 @@ service cloud.firestore {
       return isNotFrozen() && (isAdmin() || ('role' in request.auth.token && request.auth.token.role == 'Editor'));
     }
 
+    function hasValidRole() {
+      return isNotFrozen() && (
+        isOwner() || 
+        ('role' in request.auth.token && request.auth.token.role in ['Reader', 'Vip', 'VipPlus', 'Editor', 'Admin'])
+      );
+    }
+
     // ==========================================================
     // 2. HLAVNÍ KOLEKCE: LINKA_DATA (PŘÍSNÁ DOKUMENTOVÁ IZOLACE)
     // ==========================================================
     match /linka_data/nastaveni {
-      allow read: if isAuth();
+      allow read: if hasValidRole();
       allow write: if isAdmin();
     }
 
     match /linka_data/databaze_master {
-      allow read: if isAuth();
+      allow read: if hasValidRole();
       allow update: if isEditor() && 
         request.resource.data.keys().hasAll(['vyroba', 'baleni']) &&
         request.resource.data.vyroba is map &&
@@ -48,12 +55,12 @@ service cloud.firestore {
     }
 
     match /linka_data/hlaseni {
-      allow read: if isAuth();
+      allow read: if hasValidRole();
       allow write: if isAdmin();
     }
 
     match /linka_data/zamek {
-      allow read: if isAuth();
+      allow read: if hasValidRole();
       allow create: if isEditor();
       allow update, delete: if isEditor() && (
         isAdmin() || 
@@ -64,11 +71,11 @@ service cloud.firestore {
 
     match /linka_data/uzivatele {
       allow read: if isAdmin(); // Běžný uživatel nesmí vidět profily a zařízení ostatních
-      allow update: if isAuth() && isNotFrozen() && (
+      allow update: if hasValidRole() && (
         isAdmin() || 
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([request.auth.uid])
       );
-      allow create: if isAuth() && isNotFrozen() && (
+      allow create: if hasValidRole() && (
         isAdmin() || request.resource.data.keys().hasOnly([request.auth.uid])
       );
       allow delete: if isAdmin();

@@ -148,6 +148,21 @@ body.dark-mode {
 html, body { height: 100%; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: #1a365d; overflow: hidden; overscroll-behavior-y: none; }
 #topAnchor { position: absolute; top: 0; left: 0; width: 1px; height: 1px; }
 
+/* 🛡️ OCHRANA PROTI KOPÍROVÁNÍ VÝROBNÍCH DAT */
+body {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
 /* --- HAMBURGER MENU --- */
 .side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: var(--z-menu-overlay); display: none; opacity: 0; transition: opacity 0.3s; }
 .side-menu { position: fixed; top: 0; left: -280px; width: 270px; height: 100%; background: var(--bg-screen); z-index: var(--z-menu); box-shadow: 5px 0 15px rgba(0,0,0,0.6); display: flex; flex-direction: column; transition: left 0.3s; padding-top: 15px;}

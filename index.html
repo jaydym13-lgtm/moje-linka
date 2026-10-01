@@ -553,6 +553,7 @@
                                 <div class="vip-user-actions role-row-flex">
                                     <select class="vip-role-select" :value="user.role"
                                         @change="zmenitRoli(user.id, $event.target.value)">
+                                        <option value="None">0) Bez přístupu (Neschválen)</option>
                                         <option value="Reader">1) Čtenář</option>
                                         <option value="Vip">2) VIP</option>
                                         <option value="VipPlus">3) VIP PLUS</option>
