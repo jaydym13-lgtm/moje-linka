@@ -304,12 +304,12 @@ document.addEventListener('alpine:init', () => {
             sourceCodes: { pekarna: '', kynarna: '', pec: '', pripravna: '', baleni: '' }, // 🚀 ADOPTIVNI MATKY
             sync: { pekarna: true, kynarna: true, pec: true, pripravna: true, baleni: true }, // Vypínače
             exceptions: [], // 🚀 POLE PRO LOKÁLNÍ VÝJIMKY 🚀
-            tvurce: 'LV',
-            pecDig: 'Vždy zapnutá',
+            tvurce: 'VL',
+            pecDig: 'Vždy na 50%!',
             od1: '',
             od2: '',
             od3: '',
-            kynDp: '1220'
+            kynDp: ''
         },
         // 🚀 PROFI ŘEŠENÍ: Statické pole a bezpečný renderKey pro Alpine.js
         plnySeznamVariant: [],
@@ -2010,8 +2010,14 @@ async function ulozVyrobuPomociAppJs() {
             updates[`baleni.${progKey}`] = cleanBaleni;
         }
 
-        // Atomický zápis – výroba i program balení se zapíší v jediné operaci
-        await db.collection('linka_data').doc('databaze_master').update(updates);
+        // Atomický zápis – vytvoří nebo sloučí data, i když byl dokument smazán
+        let dataToSet = {
+            vyroba: { [kodBase]: cleanVyroba }
+        };
+        if (baleniBudeUpraveno && cleanBaleni) {
+            dataToSet.baleni = { [progKey]: cleanBaleni };
+        }
+        await db.collection('linka_data').doc('databaze_master').set(dataToSet, { merge: true });
 
         if (typeof Trezor !== 'undefined' && Trezor.databaze_master) {
             if (Trezor.databaze_master.vyroba) Trezor.databaze_master.vyroba[kodBase] = cleanVyroba;

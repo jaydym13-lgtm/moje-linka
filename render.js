@@ -11,21 +11,20 @@ window.LINKA_DICT = {
 };
 
 window.HOLAC_MAP = {
-    "Program 1 (8x29 plátky)": { label: "4x s deskou", foto: "img/fotoholac4xsdeskou.jpg" },
-    "Program 2 (8x12 plátky)": { label: "4x s deskou", foto: "img/fotoholac4xsdeskou.jpg" },
-    "Program 3 (4x4x12 sirky)": { label: "4x bez desky", foto: "img/fotoholac4xbezdesky.jpg" },
-    "Program 4 (4x4x29 sirky)": { label: "4x bez desky", foto: "img/fotoholac4xbezdesky.jpg" },
-    "Program 5 (8x8 kostky)": { label: "2x bez desky", foto: "img/fotoholac2xbezdesky.jpg" },
-    "Program 6 (12x16 plátky)": { label: "4x s deskou", foto: "img/fotoholac4xsdeskou.jpg" },
-    "Program 7 (8x12 chorizo)": { label: "4x bez desky", foto: "img/fotoholac4xbezdesky.jpg" },
-    "Program 8 (16x24 plátky)": { label: "4x s deskou", foto: "img/fotoholac4xsdeskou.jpg" },
-    "Program 9": { label: "6x18", foto: "img/fotoholacdisk6x18.jpg" },
-    "Program 10": { label: "6x36", foto: "img/fotoholacdisk6x36.jpg" },
-    "Program 11": { label: "Véčko", foto: "img/fotoholacdiskv.jpg" },
-    "Program 12 (4x2x29 sirky)": { label: "4x bez desky", foto: "img/fotoholac4xbezdesky.jpg" }
+    "Program 1": { label: "Program 1", foto: "" },
+    "Program 2": { label: "Program 2", foto: "" },
+    "Program 3": { label: "Program 3", foto: "" },
+    "Program 4": { label: "Program 4", foto: "" },
+    "Program 5": { label: "Program 5", foto: "" },
+    "Program 6": { label: "Program 6", foto: "" },
+    "Program 7": { label: "Program 7", foto: "" },
+    "Program 8": { label: "Program 8", foto: "" },
+    "Program 9": { label: "Program 9", foto: "" },
+    "Program 10": { label: "Program 10", foto: "" },
+    "Program 11": { label: "Program 11", foto: "" },
+    "Program 12": { label: "Program 12", foto: "" }
 };
 
-// 🔧 CHYTRÝ AUTOPILOT: Doplňuje chybějící závorky z databáze a sjednocuje názvy
 window.getFullHolacName = function(val) {
     if (!val) return val;
     let s = val.toString().trim();
@@ -48,17 +47,17 @@ window.getHolacInfo = function(progName) {
 };
 
 const MIROPACK_LIST = [
-    { id: "miro3", name: "3 boční vedení zásobníku", def: "172" }, { id: "miro4", name: "4 výška stoupacího pásu", def: "105" },
-    { id: "miro6", name: "6 čidlo doplnění krabiček", def: "30" }, { id: "miro7", name: "7 výška přisávání", def: "160" },
-    { id: "miro8", name: "8 pozice přísavky levá", def: "240" }, { id: "miro9", name: "9 šířka vod. válečku", def: "127" },
-    { id: "miro10", name: "10 délka vod. válečku", def: "215" }, { id: "miro11", name: "11 vedení dolní klopy", def: "23" },
-    { id: "miro12", name: "12 poloha můstku", def: "3" }, { id: "miro13", name: "13 výška horní klopy", def: "32" }, 
-    { id: "miro14", name: "14 šířka horní chlopně", def: "20" }, { id: "miro15", name: "15 zavírač uší levý", def: "75" }, 
-    { id: "miro16", name: "16 výška nástrčného plechu", def: "100" }, { id: "miro17", name: "17 výška zvedače krycí klopy", def: "46" }, 
-    { id: "miro18", name: "18 šířka zvedače krycí klopy", def: "16" }, { id: "miro20", name: "20 šířka krabičky", def: "253,5" }, 
-    { id: "miro21", name: "21 lišta lepící hlavy levá", def: "30" }, { id: "miro22", name: "22 lepící hlava levá", def: "15" }, 
-    { id: "miro28", name: "28 zavírač uší pravý", def: "75" }, { id: "miro29", name: "29 výška nástrčného plechu P", def: "100" }, 
-    { id: "miro30", name: "30 lišta lepící hlavy pravá", def: "30" }, { id: "miro31", name: "31 lepící hlava pravá", def: "15" }
+    { id: "miro3", name: "3 boční vedení zásobníku", def: "" }, { id: "miro4", name: "4 výška stoupacího pásu", def: "" },
+    { id: "miro6", name: "6 čidlo doplnění krabiček", def: "" }, { id: "miro7", name: "7 výška přisávání", def: "" },
+    { id: "miro8", name: "8 pozice přísavky levá", def: "" }, { id: "miro9", name: "9 šířka vod. válečku", def: "" },
+    { id: "miro10", name: "10 délka vod. válečku", def: "" }, { id: "miro11", name: "11 vedení dolní klopy", def: "" },
+    { id: "miro12", name: "12 poloha můstku", def: "" }, { id: "miro13", name: "13 výška horní klopy", def: "" }, 
+    { id: "miro14", name: "14 šířka horní chlopně", def: "" }, { id: "miro15", name: "15 zavírač uší levý", def: "" }, 
+    { id: "miro16", name: "16 výška nástrčného plechu", def: "" }, { id: "miro17", name: "17 výška zvedače krycí klopy", def: "" }, 
+    { id: "miro18", name: "18 šířka zvedače krycí klopy", def: "" }, { id: "miro20", name: "20 šířka krabičky", def: "" }, 
+    { id: "miro21", name: "21 lišta lepící hlavy levá", def: "" }, { id: "miro22", name: "22 lepící hlava levá", def: "" }, 
+    { id: "miro28", name: "28 zavírač uší pravý", def: "" }, { id: "miro29", name: "29 výška nástrčného plechu P", def: "" }, 
+    { id: "miro30", name: "30 lišta lepící hlavy pravá", def: "" }, { id: "miro31", name: "31 lepící hlava pravá", def: "" }
 ];
 
 function vycistiText(text) {
@@ -437,33 +436,10 @@ function linkaEngine() {
         },
 
         resolvePhoto(val, code) {
-        if (!val) return '';
-        let s = String(val).trim();
-        if (s.includes('.')) return resolveAssetPath(s); 
-        let v = s.toLowerCase();
-
-        if (v.includes("13")) {
-            // 👑 PROFI DETEKTIV: Místo strict === použijeme inteligentní .includes(), aby kód bezpečně přečetl i tvůj unikátní složený klíč ze Srovnávače!
-            let codeStr = String(code || '');
-            return (codeStr.includes('511408') || codeStr.includes('S511339')) ? 'img/fotoalimec13kolecek.jpg' : 'img/fotoalimec13kolecekkulata.jpg';
-        }
-            if (v.includes("15")) return "img/fotoalimec15kolecek.jpg";
-            if (v.includes("9")) return "img/fotoalimec9kolecek.jpg";
-            if (v.includes("8")) return "img/fotoalimec8kolecek.jpg";
-            if (v.includes("7")) return "img/fotoalimec7kolecek.jpg";
-            if (v.includes("6") && !v.includes("6x")) return "img/fotoalimec6kolecek.jpg";
-
-            const PHOTO_MAP = {
-                "véčko": "img/fotoholacdiskv.jpg", "vecko": "img/fotoholacdiskv.jpg",
-                "4x bez desky": "img/fotoholac4xbezdesky.jpg", "4x bez": "img/fotoholac4xbezdesky.jpg", "4xbez": "img/fotoholac4xbezdesky.jpg",
-                "4x s deskou": "img/fotoholac4xsdeskou.jpg", "4x s": "img/fotoholac4xsdeskou.jpg", "4xs": "img/fotoholac4xsdeskou.jpg",
-                "2x bez desky": "img/fotoholac2xbezdesky.jpg", "2x bez": "img/fotoholac2xbezdesky.jpg", "2xbez": "img/fotoholac2xbezdesky.jpg",
-                "6x18": "img/fotoholacdisk6x18.jpg", "6x36": "img/fotoholacdisk6x36.jpg",
-                "1": "img/fotodatum1radek.jpg", "1 řádek": "img/fotodatum1radek.jpg", "1 radek": "img/fotodatum1radek.jpg",
-                "2": "img/fotodatum2radky.jpg", "2 řádky": "img/fotodatum2radky.jpg", "2 radky": "img/fotodatum2radky.jpg"
-            };
-
-            return PHOTO_MAP[v] || "";
+            if (!val) return '';
+            let s = String(val).trim();
+            if (s.includes('.')) return resolveAssetPath(s);
+            return '';
         },
 
         getPhotoUrlForStroj(id, p, code) {
@@ -475,40 +451,12 @@ function linkaEngine() {
             if (id === 'diskSal') explicitPhoto = p.diskSalFoto;
             
             if (explicitPhoto && String(explicitPhoto).includes('.')) return resolveAssetPath(explicitPhoto);
-            
-            if (id === 'alimecKol') {
-                let ziveKol = window.getVal ? window.getVal('alimecKol_' + code, p.alimecKol) : p.alimecKol;
-                let ziveMat = window.getVal ? window.getVal('alimecMat_' + code, p.alimecMat) : p.alimecMat;
-                
-                let kol = String(ziveKol || '').toLowerCase().trim();
-                let mat = String(ziveMat || '').toLowerCase().trim();
-                
-                if (kol.includes('8') && mat.includes('48')) return 'img/fotoalimec8kolecek48mm.jpg';
-                return this.resolvePhoto(ziveKol, code);
-            }
-
-            if (id === 'diskSyr') {
-                let ziveSyr = window.getVal ? window.getVal('holSyr_' + code, p.holSyr) : p.holSyr;
-                let info = window.getHolacInfo(ziveSyr);
-                if (info) return info.foto;
-                let ziveDiskSyr = window.getVal ? window.getVal('diskSyr_' + code, p.diskSyr) : p.diskSyr;
-                return this.resolvePhoto(ziveDiskSyr, code);
-            }
-            if (id === 'diskSal') {
-                let ziveSal = window.getVal ? window.getVal('holSal_' + code, p.holSal) : p.holSal;
-                let info = window.getHolacInfo(ziveSal);
-                if (info) return info.foto;
-                let ziveDiskSal = window.getVal ? window.getVal('diskSal_' + code, p.diskSal) : p.diskSal;
-                return this.resolvePhoto(ziveDiskSal, code);
-            }
-
             return '';
         },
 
         getPhotoUrlForDatum(p, code) {
             if (p.datumFoto && String(p.datumFoto).includes('.')) return resolveAssetPath(p.datumFoto);
-            let ziveDatum = window.getVal ? window.getVal('datumRadky_' + code, p.datumRadky) : p.datumRadky;
-            return this.resolvePhoto(ziveDatum, code) || 'img/fotodatum1radek.jpg';
+            return '';
         },
 
         getCustomItems(code, sekce) {
@@ -549,7 +497,7 @@ function linkaEngine() {
             if (id === 'pekVyk') {
                 let zivePln = window.getVal ? window.getVal('pekPln_' + code, p['pekPln']) : p['pekPln'];
                 if (zivePln && !String(zivePln).toLowerCase().includes('vypnuto') && zivePln !== '') {
-                    return formatValForDisplay('Form & Fris', unit, idFull);
+                    return formatValForDisplay('Tvarovací modul', unit, idFull);
                 }
 
                 let ziveVel = window.getVal ? window.getVal('pekVel_' + code, p['pekVel']) : p['pekVel'];

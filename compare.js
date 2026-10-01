@@ -260,10 +260,10 @@ document.addEventListener('alpine:init', () => {
             let oRezim = (oD.pecRezim || '').toLowerCase().trim();
             let nRezim = (nD.pecRezim || '').toLowerCase().trim();
             // ZMĚŇ NA:
-let isOldPrujezd = (oRezim === 'sablona' || oRezim === 'prujezd');
+
+            let isOldPrujezd = (oRezim === 'sablona' || oRezim === 'prujezd');
 let isNewPrujezd = (nRezim === 'sablona' || nRezim === 'prujezd');
 
-// Pokud porovnáváme, musíme zajistit, že stroje a data taháme ze složených klíčů
 let oCode = oD.baseCode + '_' + oD.code;
 let nCode = nD.baseCode + '_' + nD.code;
 
@@ -272,7 +272,7 @@ let nCode = nD.baseCode + '_' + nD.code;
             }
 
             if (sekceKey === window.LINKA_DICT.SEKCE.KYNARNA) {
-                alerts.push({ title: '⚠️ NEZAPOMEŇ', text: 'Plný DP je vždy <span class="comp-kyn-highlight">1220</span>!' });
+                alerts.push({ title: '⚠️ KONTROLA', text: 'Zkontrolujte správné nastavení pro <span class="comp-kyn-highlight">stroj</span>!' });
             }
 
             if (sekceKey === 'pec') {
@@ -388,18 +388,17 @@ let nCode = nD.baseCode + '_' + nD.code;
                     let isVykOff = (val) => val === '' || String(val).toLowerCase().includes('vypnuto');
 
                     if (isPlnActive(oPln)) {
-                        oldText = 'Form & Fris'; 
+                        oldText = 'Tvarovací modul'; 
                     } else if (isVykOff(oldText)) {
                         oldText = getDisplayVal('pekVel', oCode, safeGet(oD['pekVel']), ''); 
                     }
 
                     if (isPlnActive(nPln)) {
-                        newText = 'Form & Fris'; 
+                        newText = 'Tvarovací modul'; 
                     } else if (isVykOff(newText)) {
                         newText = getDisplayVal('pekVel', nCode, safeGet(nD['pekVel']), ''); 
                     }
                 }
-
                 let changed = oldText !== newText;
 
                 if (p === 'holSyr' && changed) changedHolSyr = true;

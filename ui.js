@@ -262,8 +262,8 @@ document.addEventListener('click', (e) => {
 // --- UI PRVKY A MODÁLY ---
 function showToast(type) {
   let msg = type;
-  if(window.LINKA_DICT && type === window.LINKA_DICT.AUTOR.LV) msg = "Nastavení dle listu výrobků";
-  else if(window.LINKA_DICT && type === window.LINKA_DICT.AUTOR.MAKYAN) msg = "Ověřeno ve výrobě Makyánem";
+  if(window.LINKA_DICT && type === window.LINKA_DICT.AUTOR.LV) msg = "Výchozí technický předpis";
+  else if(window.LINKA_DICT && type === window.LINKA_DICT.AUTOR.MAKYAN) msg = "Ověřeno obsluhou linky";
   
   let t = document.getElementById('toastMsg');
   if(t) { 

@@ -3,7 +3,7 @@
 // =========================================================================
 
 // 🎯 JEDINÝ ZDROJ VERZE PRO CELOU APLIKACI (SINGLE SOURCE OF TRUTH)
-const APP_VERSION = 'v 3.0.3 Enterprise';
+const APP_VERSION = 'v 3.0.5 Enterprise';
 
 const CACHE_APP = 'mojelinka-app-' + APP_VERSION;
 const CACHE_PHOTOS = 'mojelinka-photos-cache-v1'; 
@@ -34,27 +34,11 @@ const CORE_URLS = [
 
 const PHOTO_URLS = [
   '/img/fotoburyvyhledavacnew.jpg',
-  '/img/fotoampekarna.jpg',
-  '/img/fotoamkynarna.jpg',
-  '/img/fotoampec.jpg',
-  '/img/fotoampripravna.jpg',
-  '/img/fotoambaleni.jpg',
-  '/img/fotodatum1radek.jpg',
-  '/img/fotodatum2radky.jpg',
-  '/img/fotoholacdiskv.jpg',
-  '/img/fotoholac4xbezdesky.jpg',
-  '/img/fotoholac4xsdeskou.jpg',
-  '/img/fotoholac2xbezdesky.jpg',
-  '/img/fotoholacdisk6x18.jpg',
-  '/img/fotoholacdisk6x36.jpg',
-  '/img/fotoalimec13kolecek.jpg',
-  '/img/fotoalimec13kolecekkulata.jpg',
-  '/img/fotoalimec8kolecek48mm.jpg',
-  '/img/fotoalimec6kolecek.jpg',
-  '/img/fotoalimec7kolecek.jpg',
-  '/img/fotoalimec8kolecek.jpg',
-  '/img/fotoalimec9kolecek.jpg',
-  '/img/fotoalimec15kolecek.jpg'
+  '/img/foto-pekarna.jpeg',
+  '/img/foto-kynarna.jpeg',
+  '/img/foto-pec.jpeg',
+  '/img/foto-pripravna.jpeg',
+  '/img/foto-baleni.jpeg'
 ];
 
 self.addEventListener('install', event => {

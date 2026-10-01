@@ -123,7 +123,7 @@
         <h2 class="hero-title">MOJE LINKA</h2>
         <div class="content-box login-content-box">
             <div id="loginError" class="err-box">❌ Špatné heslo!</div>
-            <input type="email" id="username" placeholder="Zadejte e-mail (Např. Kozlik@balic.ff)" autocomplete="off"
+            <input type="email" id="username" placeholder="Zadejte e-mail" autocomplete="off"
                 spellcheck="false" data-lpignore="true" class="login-input-user"
                 @keydown.enter="document.getElementById('password').focus()">
 
@@ -145,12 +145,12 @@
         x-transition.opacity.duration.150ms x-cloak x-data="{ searchQuery: '' }">
         <div class="app-container search-wrapper">
             <div class="settings-box search-hero-box">
-                <h3 class="search-hero-title">Tady ti polská legenda<br>pomůže najít nastavení linky</h3>
+                <h3 class="search-hero-title">Tady ti vyhledávač<br>pomůže najít nastavení výroby</h3>
                 <p class="search-hero-subtitle">Zadej kód výroby:</p>
                 <div class="search-input-wrapper search-input-row">
                     <div class="search-input-col">
                         <input type="text" inputmode="search" id="productSearch" x-model="searchQuery"
-                            @keydown.enter="executeSearch()" enterkeyhint="search" placeholder="např. 333040"
+                            @keydown.enter="executeSearch()" enterkeyhint="search" placeholder="např. 1234"
                             autocomplete="off" spellcheck="false" class="input-search search-input-field">
                         <button @click="searchQuery = ''" class="input-clear-btn search-clear-btn">×</button>
                     </div>
@@ -251,8 +251,8 @@
 
                     <div class="zebra-block">
                         <h4 class="help-h4">🔍 Bleskový Vyhledávač</h4>
-                        <p class="help-p">Stačí zadat 6 čísel kódu nebo kód poloproduktu či program a jeho číslo. Je to
-                            digitální pomocník.</p>
+                        <p class="help-p">Stačí zadat kód či program balení. Je to
+                            digitální pomocník do kapsy.</p>
                     </div>
 
                     <div class="zebra-block">
@@ -270,28 +270,18 @@
 
                     <div class="zebra-block">
                         <h4 class="help-h4">🅱️ Seznam balících programů</h4>
-                        <p class="help-p">Kompletní offline seznam programů pro baličku Miropack na jedno kliknutí.</p>
+                        <p class="help-p">Kompletní offline seznam programů pro balicí linku na jedno kliknutí.</p>
                     </div>
 
                     <div class="zebra-block">
                         <h4 class="help-h4">📸 Foťák</h4>
-                        <p class="help-p">Pokud se u nějaké hodnoty (např. u názvu disku) objeví tato ikona foťáku 📷,
-                            stačí na ni (nebo přímo na text) kliknout. Aplikace ti ukáže fotku, jak to má vypadat, když
-                            si nejsi jistý.</p>
+                        <p class="help-p">Pokud se u nějaké hodnoty objeví ikona foťáku 📷,
+                            stačí na ni kliknout pro zobrazení vzorového náhledu.</p>
                     </div>
 
                     <div class="zebra-block">
                         <h4 class="help-h4">↕️ Rozbalit / Zabalit vše</h4>
                         <p class="help-p">Rychlý ovladač v horní liště. Jedním kliknutím rozevřeš nebo sbalíš celou linku naráz. Funguje jako bleskový přepínač, kterým můžeš kdykoliv přebít výchozí nastavení aplikace.</p>
-                    </div>
-
-                    <div class="zebra-block">
-                        <h4 class="help-h4">🏷️ Značky u výrob</h4>
-                        <ul class="help-ul">
-                            <li><span class="zdroj-badge badge-LV">LV</span> <b>List Výrobků:</b> Nastavení přesně podle
-                                papíru.</li>
-                            <li><span class="zdroj-badge badge-M">M</span> <b>Makyán:</b> Nastavení vytvořeno nebo ověřeno přímo v praxi Makyánem.</li>
-                        </ul>
                     </div>
 
                     <div class="zebra-block">
@@ -366,7 +356,7 @@
                 <div class="search-input-wrapper search-input-row mb-15">
                     <div class="search-input-col">
                         <input type="text" inputmode="search" x-model="novyKod" @keydown.enter="pridatDoSichty()"
-                            placeholder="Např. 333040 nebo Program 10" autocomplete="off" spellcheck="false"
+                            placeholder="Např. 123456 nebo Program 1" autocomplete="off" spellcheck="false"
                             class="input-search search-input-field">
                         <button @click="novyKod = ''" class="input-clear-btn search-clear-btn">×</button>
                     </div>
@@ -439,7 +429,7 @@
                     </div>
                     <div class="zebra-block">
                         <h4 class="help-h4">PLÁNOVAČ</h4>
-                        <p class="help-p">Zde si můžeš na začátku směny přidat kódy výroby i čísla programů pro Miropack
+                        <p class="help-p">Zde si můžeš na začátku směny přidat kódy výroby i čísla balicích programů
                             (stejně jako ve vyhledávači), které tě dneska čekají. Pomocí šipek <b>[⬆️] [⬇️]</b> si je
                             seřaď do správné posloupnosti, nebo nepotřebné smaž <b>[🗑️]</b>.</p>
                     </div>
@@ -1559,7 +1549,7 @@
        get sortedKeys() { return Object.keys(this.db).sort((a,b) => (parseInt(a.replace(/\D/g,'')) || 0) - (parseInt(b.replace(/\D/g,'')) || 0)); }
   }">
         <div class="app-container pt-60">
-            <h2 class="katalog-screen-title">SEZNAM BALÍCÍCH PROGRAMŮ - MIROPACK</h2>
+            <h2 class="katalog-screen-title">SEZNAM PROGRAMŮ BALENÍ</h2>
             <template x-if="Object.keys(db).length === 0">
                 <p class="db-empty-msg">Katalog je prázdný.</p>
             </template>
@@ -2003,7 +1993,7 @@
                                 style="font-size: 13px; font-weight: bold; color: var(--c-primary); margin-bottom: 2px;">
                                 Kód 1. poloproduktu</div>
                             <input type="text" x-model="form.poloprodukty[0].kod" @blur="zkontrolovatExistujiciPoloprodukt()" @input="stavKodu = ''"
-                                class="sablona-input-main wiz-input-upper" placeholder="např. B511000">
+                                class="sablona-input-main wiz-input-upper" placeholder="např. P1001">
                             <!-- 🟢 INLINE SIGNALIZACE UNIKÁTNOSTI -->
                             <div x-show="stavKodu === 'novy'" x-cloak style="font-size: 12px; color: #22c55e; font-weight: bold; margin-top: 5px; padding-left: 5px;">✅ Nový unikátní produkt (výrobu nutno vyplnit ručně)</div>
                         </div>
