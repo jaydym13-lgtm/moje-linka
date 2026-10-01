@@ -458,14 +458,47 @@ async function toggleFreezeStatus(uid, status) {
 
     try {
         const zmrazitServer = cloudFunctions.httpsCallable('zmrazitUzivateleServer');
-        await zmrazitServer({ uid: uid, isFrozen: status });
-        
-        if(typeof showToast === 'function') showToast(status ? "Účet tvrdě zmrazen!" : "Účet odmrazen!");
+        let res = await zmrazitServer({ uid: uid, isFrozen: status });
+        let msg = (res && res.data && res.data.message) ? res.data.message : (status ? "Účet deaktivován!" : "Účet aktivován!");
+        if(typeof showToast === 'function') showToast(msg);
     } catch (e) {
-        console.error("Chyba mrazáku:", e);
-        if(typeof showToast === 'function') showToast("❌ Chyba mrazáku: " + e.message);
+        console.error("Chyba správy účtu:", e);
+        if(typeof showToast === 'function') showToast("❌ Chyba správy účtu: " + e.message);
     }
 }
+
+// 🚀 FUNKCE PRO KOMPLETNÍ SMAZÁNÍ ÚČTU
+async function smazatUzivatele(uid, userName) {
+    if (isLoggingIn || (typeof isManuallyDisconnected !== 'undefined' && isManuallyDisconnected) || !navigator.onLine || !cloudFunctions) { 
+        if(typeof showToast === 'function') showToast("⛔ Potřebuješ internet a funkční spojení ke smazání účtu!"); return; 
+    }
+
+    let jmeno = userName || uid;
+    if (!confirm(`⚠️ Opravdu chceš trvale smazat uživatele "${jmeno}"?\n\nTato operace nenávratně odstraní jeho přihlašovací účet i veškeré záznamy z databáze.`)) {
+        return;
+    }
+
+    let currentUser = auth.currentUser;
+    if (!currentUser) {
+        if(typeof showToast === 'function') showToast("⛔ Nejsi přihlášený v aplikaci!"); return;
+    }
+
+    if(typeof showToast === 'function') showToast("Mažu uživatele na serveru...");
+
+    try {
+        const smazatServer = cloudFunctions.httpsCallable('smazatUzivateleServer');
+        let res = await smazatServer({ uid: uid });
+        let msg = (res && res.data && res.data.message) ? res.data.message : "Uživatel úspěšně smazán!";
+        if(typeof showToast === 'function') showToast(msg);
+    } catch (e) {
+        console.error("Chyba při mazání uživatele:", e);
+        if(typeof showToast === 'function') showToast("❌ Chyba při mazání: " + e.message);
+    }
+}
+
+window.zmenitRoli = zmenitRoli;
+window.toggleFreezeStatus = toggleFreezeStatus;
+window.smazatUzivatele = smazatUzivatele;
 
 function getReadableDevice() {
     const ua = navigator.userAgent;

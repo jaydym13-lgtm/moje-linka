@@ -564,6 +564,10 @@
                                         @click="toggleFreezeStatus(user.id, !user.isFrozen)"
                                         x-text="user.isFrozen ? 'ODMRAZIT' : 'ZMRAZIT'">
                                     </button>
+                                    <button class="vip-delete-btn"
+                                        @click="smazatUzivatele(user.id, user.name || user.email)">
+                                        SMAZAT
+                                    </button>
                                 </div>
                             </div>
                         </template>

@@ -77,7 +77,7 @@ exports.zmenitRoliServer = onCall({ region: "us-central1", enforceAppCheck: true
 });
 
 // =========================================================================
-// 2. FUNKCE PRO ZMRAZENÍ ÚČTU
+// 2. FUNKCE PRO ZMRAZENÍ ÚČTU (ODOLNÁ VŮČI SMAZANÝM ÚČTŮM)
 // =========================================================================
 exports.zmrazitUzivateleServer = onCall({ region: "us-central1", enforceAppCheck: true }, async (request) => {
     if (!request.auth) {
@@ -108,31 +108,105 @@ exports.zmrazitUzivateleServer = onCall({ region: "us-central1", enforceAppCheck
     }
 
     try {
-        const userRecord = await admin.auth().getUser(targetUid);
-        const currentClaims = userRecord.customClaims || {};
+        try {
+            const userRecord = await admin.auth().getUser(targetUid);
+            const currentClaims = userRecord.customClaims || {};
 
-        await admin.auth().setCustomUserClaims(targetUid, {
-            ...currentClaims,
-            isFrozen: isFrozen
-        });
+            await admin.auth().setCustomUserClaims(targetUid, {
+                ...currentClaims,
+                isFrozen: isFrozen
+            });
+
+            await admin.auth().revokeRefreshTokens(targetUid);
+        } catch (authError) {
+            if (authError.code !== 'auth/user-not-found') {
+                throw authError;
+            }
+        }
 
         await db.collection('linka_data').doc('nastaveni').set({
             zmrazeni: { [targetUid]: isFrozen ? true : admin.firestore.FieldValue.delete() }
         }, { merge: true });
 
-        // Okamžité zneplatnění tokenů při zmrazení i odmrazení
-        await admin.auth().revokeRefreshTokens(targetUid);
-
         return { message: isFrozen ? 'Účet byl deaktivován.' : 'Účet byl aktivován.' };
     } catch (error) {
-        console.error("Chyba deaktivace účtu:", error);
+        console.error("Chyba správy stavu účtu:", error);
         if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'Chyba serveru při správě stavu účtu.');
     }
 });
 
 // =========================================================================
-// 3. SERVEROVÝ ZÁPIS PŘIHLÁŠENÍ (BEZPEČNÉ LOGOVÁNÍ)
+// 3. FUNKCE PRO KOMPLETNÍ A BEZPEČNÉ SMAZÁNÍ ÚČTU
+// =========================================================================
+exports.smazatUzivateleServer = onCall({ region: "us-central1", enforceAppCheck: true }, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Chybí ověření uživatele.');
+    }
+
+    const callerRole = request.auth.token.role;
+    const db = admin.firestore();
+    const nastaveniDoc = await db.collection('linka_data').doc('nastaveni').get();
+    const nastaveniData = nastaveniDoc.exists ? nastaveniDoc.data() : {};
+    const isCallerOwner = nastaveniData.owner_users && nastaveniData.owner_users[request.auth.uid] === true;
+
+    if (!isCallerOwner && callerRole !== 'Admin') {
+        throw new HttpsError('permission-denied', 'Operace vyžaduje administrátorské oprávnění.');
+    }
+
+    const data = request.data || {};
+    const targetUid = data.uid;
+
+    if (!targetUid) {
+        throw new HttpsError('invalid-argument', 'Chybí identifikátor uživatele.');
+    }
+
+    const isTargetOwner = nastaveniData.owner_users && nastaveniData.owner_users[targetUid] === true;
+    if (isTargetOwner) {
+        throw new HttpsError('permission-denied', 'Účet systémového správce nelze smazat.');
+    }
+
+    if (targetUid === request.auth.uid) {
+        throw new HttpsError('permission-denied', 'Administrátor nemůže smazat svůj vlastní účet.');
+    }
+
+    try {
+        try {
+            await admin.auth().deleteUser(targetUid);
+        } catch (authErr) {
+            if (authErr.code !== 'auth/user-not-found') {
+                throw authErr;
+            }
+        }
+
+        const remove = admin.firestore.FieldValue.delete();
+        await db.collection('linka_data').doc('nastaveni').set({
+            admin_users: { [targetUid]: remove },
+            editor_users: { [targetUid]: remove },
+            vip_plus_users: { [targetUid]: remove },
+            vip_users: { [targetUid]: remove },
+            reader_users: { [targetUid]: remove },
+            owner_users: { [targetUid]: remove },
+            zmrazeni: { [targetUid]: remove },
+            prezdivky: { [targetUid]: remove }
+        }, { merge: true });
+
+        await db.collection('linka_data').doc('uzivatele').set({
+            [targetUid]: remove
+        }, { merge: true });
+
+        await db.collection('uzivatele_online').doc(targetUid).delete().catch(() => {});
+
+        return { message: 'Uživatel byl kompletně a trvale odstraněn.' };
+    } catch (error) {
+        console.error("Chyba při mazání uživatele:", error);
+        if (error instanceof HttpsError) throw error;
+        throw new HttpsError('internal', 'Chyba serveru při mazání uživatele.');
+    }
+});
+
+// =========================================================================
+// 4. SERVEROVÝ ZÁPIS PŘIHLÁŠENÍ (BEZPEČNÉ LOGOVÁNÍ)
 // =========================================================================
 exports.zalogovatPrihlaseniServer = onCall({ region: "us-central1", enforceAppCheck: true }, async (request) => {
     if (!request.auth) {
