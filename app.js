@@ -2,14 +2,52 @@
 // 🧠 JÁDRO APLIKACE A ROUTOVÁNÍ
 // =========================================================================
 
-// 🛠️ MIGRACE STARÝCH DAT A OCHRANA PŘED REFREŠEM
-const stareKlice = ['lastScreen', 'activeCode', 'lastBaseCode', 'compareOld', 'compareNew', 'isCompareMode', 'activeProg'];
-stareKlice.forEach(k => {
-    let val = localStorage.getItem(k);
-    if (val !== null && !val.startsWith('"') && !val.startsWith('{') && !val.startsWith('[')) {
-        localStorage.setItem(k, JSON.stringify(val));
+// 🧹 TOTÁLNÍ ČISTKA STARÝCH VÝROBNÍCH DAT A FOTEK (WIPE PRO VŠECHNA ZAŘÍZENÍ)
+const WIPE_VERSION = 'v3.0.4_wiped';
+if (localStorage.getItem('storage_wipe_ver') !== WIPE_VERSION) {
+    // 1. Smazání všech persisted kódů receptur a srovnávače
+    const kliceNaOdstrel = [
+        'activeCode', 'lastBaseCode', 'compareOld', 'compareNew',
+        'compareOldBase', 'compareNewBase', 'activeProg', 'lastScreen',
+        'isCompareMode', 'posledniAktualizace'
+    ];
+    kliceNaOdstrel.forEach(k => localStorage.removeItem(k));
+
+    // 2. Smazání všech front a kódů z plánovače (všechny profily)
+    Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('sichta_data_') || k.startsWith('_x_')) {
+            localStorage.removeItem(k);
+        }
+    });
+
+    // 3. Spláchnutí staré Firestore mezipaměti z IndexedDB
+    try {
+        if (window.indexedDB && indexedDB.databases) {
+            indexedDB.databases().then(dbs => {
+                dbs.forEach(db => {
+                    if (db.name && (db.name.includes('firestore') || db.name.includes('moje-linka'))) {
+                        indexedDB.deleteDatabase(db.name);
+                    }
+                });
+            }).catch(() => {});
+        }
+    } catch (e) {}
+
+    // 4. 🔥 KOMPLETNÍ SMAZÁNÍ STARÝCH FOTEK Z CACHESTORAGE
+    if ('caches' in window) {
+        caches.keys().then(keys => {
+            keys.forEach(k => {
+                if (k.includes('photos') || k.includes('mojelinka')) {
+                    caches.delete(k);
+                }
+            });
+        }).catch(() => {});
     }
-});
+
+    // Označíme zařízení za kompletně vydezinfikované
+    localStorage.setItem('storage_wipe_ver', WIPE_VERSION);
+    console.log("🧹 Místní úložiště i fotky byly kompletně vyčištěny.");
+}
 
 // 🛡️ CSP COMPLIANT INICIALIZACE SPLASH SCREENU
 if (localStorage.getItem('casPrihlaseni')) {
