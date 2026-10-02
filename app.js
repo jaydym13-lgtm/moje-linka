@@ -2235,7 +2235,7 @@ let deferredInstallPrompt = null;
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredInstallPrompt = e;
+    window.deferredInstallPrompt = deferredInstallPrompt = e;
     if (typeof Alpine !== 'undefined' && Alpine.store('appState')) {
         Alpine.store('appState').canInstallPwa = true;
     }

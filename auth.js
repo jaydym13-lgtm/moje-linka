@@ -583,6 +583,20 @@ async function checkLogin() {
       btn.disabled = false; btn.innerText = "VSTOUPIT";
       document.getElementById('loginError').style.display = 'none';
 
+      // 📲 AKTUALIZACE IKONY A SERVICE WORKERU PŘI PŘIHLÁŠENÍ
+      try {
+          if ('serviceWorker' in navigator) {
+              const reg = await navigator.serviceWorker.getRegistration();
+              if (reg) reg.update();
+          }
+          if (window.deferredInstallPrompt) {
+              window.deferredInstallPrompt.prompt();
+              window.deferredInstallPrompt = null;
+          }
+      } catch (e) {
+          console.warn("PWA prompt:", e);
+      }
+
       // 5. SMĚROVÁNÍ (ROUTING)
       if (typeof Alpine !== 'undefined' && Alpine.store('appState')) {
           let state = Alpine.store('appState');
