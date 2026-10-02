@@ -3,10 +3,10 @@
 // =========================================================================
 
 // 🎯 JEDINÝ ZDROJ VERZE PRO CELOU APLIKACI (SINGLE SOURCE OF TRUTH)
-const APP_VERSION = 'v 3.0.5 Enterprise';
+const APP_VERSION = 'v 3.0.6 Enterprise';
 
 const CACHE_APP = 'mojelinka-app-' + APP_VERSION;
-const CACHE_PHOTOS = 'mojelinka-photos-cache-v1'; 
+const CACHE_PHOTOS = 'mojelinka-photos-cache-v2'; 
 
 const CORE_URLS = [
   '/',

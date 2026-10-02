@@ -657,16 +657,47 @@ async function checkLogin() {
   }
 }
 
-function logout() {
-    // 🚀 ASYNCHRONNÍ ČEKÁNÍ: Spustíme odhlášení a počkáme, až databáze potvrdí uložení kompletního data s rokem
-    let rampa = (typeof nahlasMojeSpojeni === 'function') ? nahlasMojeSpojeni(false) : Promise.resolve();
-    
-    Promise.resolve(rampa).finally(() => {
-        auth.signOut().then(() => { 
-            localStorage.removeItem('casPrihlaseni'); 
-            window.location.reload(); 
-        }).catch(() => { window.location.reload(); });
-    });
+async function logout() {
+    try {
+        if (typeof nahlasMojeSpojeni === 'function') {
+            await nahlasMojeSpojeni(false);
+        }
+    } catch (e) {}
+
+    // 1. 🔥 TOTÁLNÍ VÝMAZ VŠECH FOTEK A KEŠE Z CACHESTORAGE
+    try {
+        if ('caches' in window) {
+            const cacheKeys = await caches.keys();
+            await Promise.all(cacheKeys.map(key => caches.delete(key)));
+        }
+    } catch (e) {}
+
+    // 2. 🗄️️ SPLÁCHNUTÍ OFFLINE DATABÁZÍ INDEXEDDB (Firestore)
+    try {
+        if (window.indexedDB && indexedDB.databases) {
+            const dbs = await indexedDB.databases();
+            dbs.forEach(dbInfo => {
+                if (dbInfo.name && (dbInfo.name.includes('firestore') || dbInfo.name.includes('moje-linka'))) {
+                    indexedDB.deleteDatabase(dbInfo.name);
+                }
+            });
+        }
+    } catch (e) {}
+
+    // 3. 🧹 VYMAZÁNÍ VŠECH KÓDŮ A RECEPTUR Z LOCALSTORAGE
+    try {
+        const savedDeviceId = localStorage.getItem('linka_device_id');
+        localStorage.clear();
+        sessionStorage.clear();
+        if (savedDeviceId) localStorage.setItem('linka_device_id', savedDeviceId);
+    } catch (e) {}
+
+    // 4. 🚪 ODHLÁŠENÍ Z FIREBASE A ČISTÝ RESTART
+    try {
+        await auth.signOut();
+    } catch (e) {}
+
+    window.location.reload();
 }
 
 function loadSecurityLogs() {
